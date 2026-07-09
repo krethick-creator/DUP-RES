@@ -19,7 +19,7 @@ const AuthPage = {
           <p class="subtitle">${this.mode === 'login' ? 'Sign in to your account' : 'Start your journey with AI-powered recruitment'}</p>
 
           <div class="role-tabs">
-            ${['candidate', 'recruiter', 'admin'].map(r => `
+            ${['candidate', 'recruiter'].map(r => `
               <button class="role-tab ${this.role === r ? 'active' : ''}" data-role="${r}">
                 ${r.charAt(0).toUpperCase() + r.slice(1)}
               </button>
@@ -62,8 +62,7 @@ const AuthPage = {
             <div class="mt-6 p-4 rounded" style="background:var(--bg-secondary);font-size:0.8125rem">
               <strong>Demo Accounts:</strong><br>
               Candidate: alex@example.com / candidate123<br>
-              Recruiter: recruiter@techvision.com / recruiter123<br>
-              Admin: admin@recruitment.com / admin123
+              Recruiter: recruiter@techvision.com / recruiter123
             </div>
           ` : ''}
         </div>
@@ -98,7 +97,7 @@ const AuthPage = {
         API.setToken(result.token);
         API.setUser(result.user);
         UI.toast(`Welcome, ${result.user.name}!`, 'success');
-        const routes = { candidate: '#/candidate', recruiter: '#/recruiter', admin: '#/admin' };
+        const routes = { candidate: '#/candidate', recruiter: '#/recruiter' };
         window.location.hash = routes[result.user.role] || '#/candidate';
       } catch (err) {
         UI.toast(err.message, 'error');

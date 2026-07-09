@@ -1,4 +1,4 @@
-﻿const { generateStructuredContent } = require('./geminiClient');
+const { generateStructuredContent } = require('./geminiClient');
 const prompts = require('./aiPrompts');
 
 const MODEL = 'gemini-2.5-flash';
@@ -38,7 +38,7 @@ const toObject = (value, fallback = {}) => {
   return fallback;
 };
 
-exports.screenResume = async (resume, job) => {
+exports.screenResume = async (resume, job, userId = null, options = {}) => {
   const fallback = {
     matchScore: 70,
     recommendation: 'review',
@@ -49,7 +49,7 @@ exports.screenResume = async (resume, job) => {
     confidence: 0.5
   };
 
-  const data = await callGemini(prompts.resumeScreeningPrompt, { resume, job }, fallback);
+  const data = await callGemini(prompts.resumeScreeningPrompt, { resume, job }, fallback, userId, options);
   return {
     ...data,
     module: 'resume-screening',
@@ -63,7 +63,7 @@ exports.screenResume = async (resume, job) => {
   };
 };
 
-exports.parseResume = async (filepath) => {
+exports.parseResume = async (filepath, userId = null, options = {}) => {
   const fallback = {
     parsed: {
       name: 'Unknown',
@@ -81,7 +81,7 @@ exports.parseResume = async (filepath) => {
     rawAnalysis: 'Fallback resume parsing output.'
   };
 
-  const data = await callGemini(prompts.parseResumePrompt, filepath, fallback);
+  const data = await callGemini(prompts.parseResumePrompt, filepath, fallback, userId, options);
   return {
     ...data,
     module: 'resume-parsing',
@@ -92,7 +92,7 @@ exports.parseResume = async (filepath) => {
   };
 };
 
-exports.matchSkills = async (candidateSkills, jobSkills) => {
+exports.matchSkills = async (candidateSkills, jobSkills, userId = null, options = {}) => {
   const fallback = {
     matchPercentage: 70,
     matchedSkills: [],
@@ -101,7 +101,7 @@ exports.matchSkills = async (candidateSkills, jobSkills) => {
     rationale: 'Fallback skill matching output.'
   };
 
-  const data = await callGemini(prompts.skillMatchingPrompt, { candidateSkills, jobSkills }, fallback);
+  const data = await callGemini(prompts.skillMatchingPrompt, { candidateSkills, jobSkills }, fallback, userId, options);
   return {
     ...data,
     module: 'semantic-skill-matching',
@@ -113,7 +113,7 @@ exports.matchSkills = async (candidateSkills, jobSkills) => {
   };
 };
 
-exports.rankCandidates = async (candidates) => {
+exports.rankCandidates = async (candidates, userId = null, options = {}) => {
   const fallback = {
     candidates: (candidates || []).map((candidate, index) => ({
       ...candidate,
@@ -124,7 +124,7 @@ exports.rankCandidates = async (candidates) => {
     }))
   };
 
-  const data = await callGemini(prompts.rankingPrompt, candidates, fallback);
+  const data = await callGemini(prompts.rankingPrompt, candidates, fallback, userId, options);
   const ranked = Array.isArray(data.candidates) ? data.candidates : fallback.candidates;
   return {
     ...data,
@@ -138,7 +138,7 @@ exports.rankCandidates = async (candidates) => {
   };
 };
 
-exports.explainScore = async (score, context) => {
+exports.explainScore = async (score, context, userId = null, options = {}) => {
   const fallback = {
     factors: [
       { factor: 'Technical Skills', weight: 0.35, score: score * 0.9 },
@@ -151,7 +151,7 @@ exports.explainScore = async (score, context) => {
     confidence: 0.5
   };
 
-  const data = await callGemini(prompts.explainScorePrompt, { score, context }, fallback);
+  const data = await callGemini(prompts.explainScorePrompt, { score, context }, fallback, userId, options);
   return {
     ...data,
     module: 'explainable-scoring',
@@ -161,7 +161,7 @@ exports.explainScore = async (score, context) => {
   };
 };
 
-exports.generateDynamicResume = async (resume, job) => {
+exports.generateDynamicResume = async (resume, job, userId = null, options = {}) => {
   const fallback = {
     tailoredSummary: `Experienced developer optimized for ${job?.title || 'target role'}`,
     highlightedSkills: resume?.parsed?.skills?.slice(0, 5) || [],
@@ -169,7 +169,7 @@ exports.generateDynamicResume = async (resume, job) => {
     summary: 'Fallback dynamic resume tailoring output.'
   };
 
-  const data = await callGemini(prompts.dynamicResumePrompt, { resume, job }, fallback);
+  const data = await callGemini(prompts.dynamicResumePrompt, { resume, job }, fallback, userId, options);
   return {
     ...data,
     module: 'dynamic-resume',
@@ -180,7 +180,7 @@ exports.generateDynamicResume = async (resume, job) => {
   };
 };
 
-exports.simulateResume = async (resume, scenarios) => {
+exports.simulateResume = async (resume, scenarios, userId = null, options = {}) => {
   const fallback = {
     scenarios: (scenarios || ['FAANG', 'Startup', 'Enterprise']).map((scenario) => ({
       scenario,
@@ -190,7 +190,7 @@ exports.simulateResume = async (resume, scenarios) => {
     }))
   };
 
-  const data = await callGemini(prompts.resumeSimulationPrompt, { resume, scenarios }, fallback);
+  const data = await callGemini(prompts.resumeSimulationPrompt, { resume, scenarios }, fallback, userId, options);
   return {
     ...data,
     module: 'resume-simulation',
@@ -198,7 +198,7 @@ exports.simulateResume = async (resume, scenarios) => {
   };
 };
 
-exports.checkAuthenticity = async (resume) => {
+exports.checkAuthenticity = async (resume, userId = null, options = {}) => {
   const fallback = {
     authenticityScore: 86,
     flags: [],
@@ -206,7 +206,7 @@ exports.checkAuthenticity = async (resume) => {
     summary: 'Fallback authenticity check output.'
   };
 
-  const data = await callGemini(prompts.authenticityPrompt, { resume }, fallback);
+  const data = await callGemini(prompts.authenticityPrompt, { resume }, fallback, userId, options);
   return {
     ...data,
     module: 'authenticity-checker',
@@ -217,7 +217,7 @@ exports.checkAuthenticity = async (resume) => {
   };
 };
 
-exports.generateTimeline = async (resume) => {
+exports.generateTimeline = async (resume, userId = null, options = {}) => {
   const fallback = {
     timeline: (resume?.parsed?.experience || []).map((experience, index) => ({
       id: index,
@@ -230,7 +230,7 @@ exports.generateTimeline = async (resume) => {
     summary: 'Fallback timeline output.'
   };
 
-  const data = await callGemini(prompts.timelinePrompt, { resume }, fallback);
+  const data = await callGemini(prompts.timelinePrompt, { resume }, fallback, userId, options);
   return {
     ...data,
     module: 'resume-timeline',
@@ -239,7 +239,7 @@ exports.generateTimeline = async (resume) => {
   };
 };
 
-exports.generateImprovementReport = async (resume) => {
+exports.generateImprovementReport = async (resume, userId = null, options = {}) => {
   const fallback = {
     overallGrade: 'B+',
     improvements: [
@@ -251,7 +251,7 @@ exports.generateImprovementReport = async (resume) => {
     summary: 'Fallback improvement report output.'
   };
 
-  const data = await callGemini(prompts.improvementReportPrompt, { resume }, fallback);
+  const data = await callGemini(prompts.improvementReportPrompt, { resume }, fallback, userId, options);
   return {
     ...data,
     module: 'improvement-report',
@@ -262,7 +262,7 @@ exports.generateImprovementReport = async (resume) => {
   };
 };
 
-exports.analyzeGitHub = async (username) => {
+exports.analyzeGitHub = async (username, userId = null, options = {}) => {
   const fallback = {
     username,
     repos: [],
@@ -273,7 +273,7 @@ exports.analyzeGitHub = async (username) => {
     contributionAnalysis: { consistency: 70, impact: 70, collaboration: 70 }
   };
 
-  const data = await callGemini(prompts.githubAnalysisPrompt, { username }, fallback);
+  const data = await callGemini(prompts.githubAnalysisPrompt, { username }, fallback, userId, options);
   return {
     ...data,
     module: 'github-analysis',
@@ -287,7 +287,7 @@ exports.analyzeGitHub = async (username) => {
   };
 };
 
-exports.projectKnowledge = async (projectName, question) => {
+exports.projectKnowledge = async (projectName, question, userId = null, options = {}) => {
   const fallback = {
     answer: `Based on analysis of ${projectName}: the project is architecturally sound and well organized.`,
     summary: 'Fallback project knowledge output.',
@@ -295,7 +295,7 @@ exports.projectKnowledge = async (projectName, question) => {
     confidence: 0.5
   };
 
-  const data = await callGemini(prompts.projectKnowledgePrompt, { projectName, question }, fallback);
+  const data = await callGemini(prompts.projectKnowledgePrompt, { projectName, question }, fallback, userId, options);
   return {
     ...data,
     module: 'project-knowledge',
@@ -306,7 +306,7 @@ exports.projectKnowledge = async (projectName, question) => {
   };
 };
 
-exports.analyzeSkillTransfer = async (skills) => {
+exports.analyzeSkillTransfer = async (skills, userId = null, options = {}) => {
   const fallback = {
     transfers: (skills || []).map((skill) => ({
       skill,
@@ -316,7 +316,7 @@ exports.analyzeSkillTransfer = async (skills) => {
     summary: 'Fallback skill transfer analysis.'
   };
 
-  const data = await callGemini(prompts.skillTransferPrompt, { skills }, fallback);
+  const data = await callGemini(prompts.skillTransferPrompt, { skills }, fallback, userId, options);
   return {
     ...data,
     module: 'skill-transfer',
@@ -325,7 +325,7 @@ exports.analyzeSkillTransfer = async (skills) => {
   };
 };
 
-exports.generateCodingAssessment = async (language, difficulty) => {
+exports.generateCodingAssessment = async (language, difficulty, userId = null, options = {}) => {
   const fallback = {
     title: `${difficulty || 'Medium'} ${language || 'JavaScript'} Challenge`,
     problems: [
@@ -337,7 +337,7 @@ exports.generateCodingAssessment = async (language, difficulty) => {
     summary: 'Fallback coding assessment output.'
   };
 
-  const data = await callGemini(prompts.codingAssessmentPrompt, { language, difficulty }, fallback);
+  const data = await callGemini(prompts.codingAssessmentPrompt, { language, difficulty }, fallback, userId, options);
   return {
     ...data,
     module: 'coding-assessment',
@@ -348,7 +348,7 @@ exports.generateCodingAssessment = async (language, difficulty) => {
   };
 };
 
-exports.reviewCode = async (code, language) => {
+exports.reviewCode = async (code, language, userId = null, options = {}) => {
   const fallback = {
     score: 75,
     issues: [
@@ -359,7 +359,7 @@ exports.reviewCode = async (code, language) => {
     summary: 'Fallback code review output.'
   };
 
-  const data = await callGemini(prompts.codeReviewPrompt, { code, language }, fallback);
+  const data = await callGemini(prompts.codeReviewPrompt, { code, language }, fallback, userId, options);
   return {
     ...data,
     module: 'code-review',
@@ -371,7 +371,7 @@ exports.reviewCode = async (code, language) => {
   };
 };
 
-exports.generateInterviewQuestions = async (role, skills, count = 10) => {
+exports.generateInterviewQuestions = async (role, skills, count = 10, userId = null, options = {}) => {
   const fallback = {
     questions: Array.from({ length: count }, (_, index) => ({
       id: index + 1,
@@ -382,7 +382,7 @@ exports.generateInterviewQuestions = async (role, skills, count = 10) => {
     summary: 'Fallback interview question output.'
   };
 
-  const data = await callGemini(prompts.interviewQuestionsPrompt, { role, skills, count }, fallback);
+  const data = await callGemini(prompts.interviewQuestionsPrompt, { role, skills, count }, fallback, userId, options);
   return {
     ...data,
     module: 'interview-questions',
@@ -391,7 +391,7 @@ exports.generateInterviewQuestions = async (role, skills, count = 10) => {
   };
 };
 
-exports.inferSoftSkills = async (profile) => {
+exports.inferSoftSkills = async (profile, userId = null, options = {}) => {
   const fallback = {
     skills: {
       communication: 75,
@@ -404,7 +404,7 @@ exports.inferSoftSkills = async (profile) => {
     confidence: 0.5
   };
 
-  const data = await callGemini(prompts.softSkillsPrompt, { profile }, fallback);
+  const data = await callGemini(prompts.softSkillsPrompt, { profile }, fallback, userId, options);
   return {
     ...data,
     module: 'soft-skill-inference',
@@ -414,7 +414,7 @@ exports.inferSoftSkills = async (profile) => {
   };
 };
 
-exports.candidateSummary = async (profile) => {
+exports.candidateSummary = async (profile, userId = null, options = {}) => {
   const fallback = {
     summary: 'Candidate summary unavailable.',
     highlights: [],
@@ -423,7 +423,7 @@ exports.candidateSummary = async (profile) => {
     nextSteps: []
   };
 
-  const data = await callGemini(prompts.candidateSummaryPrompt, { profile }, fallback);
+  const data = await callGemini(prompts.candidateSummaryPrompt, { profile }, fallback, userId, options);
   return {
     ...data,
     module: 'candidate-summary',
@@ -435,7 +435,7 @@ exports.candidateSummary = async (profile) => {
   };
 };
 
-exports.recruiterSummary = async (profile, job) => {
+exports.recruiterSummary = async (profile, job, userId = null, options = {}) => {
   const fallback = {
     summary: 'Recruiter summary unavailable.',
     interviewFocus: [],
@@ -443,7 +443,7 @@ exports.recruiterSummary = async (profile, job) => {
     suggestedQuestions: []
   };
 
-  const data = await callGemini(prompts.recruiterSummaryPrompt, { profile, job }, fallback);
+  const data = await callGemini(prompts.recruiterSummaryPrompt, { profile, job }, fallback, userId, options);
   return {
     ...data,
     module: 'recruiter-summary',
@@ -454,7 +454,7 @@ exports.recruiterSummary = async (profile, job) => {
   };
 };
 
-exports.personalizedFeedback = async (profile, targetRole) => {
+exports.personalizedFeedback = async (profile, targetRole, userId = null, options = {}) => {
   const fallback = {
     feedback: 'Personalized feedback could not be generated.',
     priorities: [],
@@ -462,7 +462,7 @@ exports.personalizedFeedback = async (profile, targetRole) => {
     expectedImpact: 'Moderate improvement potential.'
   };
 
-  const data = await callGemini(prompts.personalizedFeedbackPrompt, { profile, targetRole }, fallback);
+  const data = await callGemini(prompts.personalizedFeedbackPrompt, { profile, targetRole }, fallback, userId, options);
   return {
     ...data,
     module: 'personalized-feedback',
@@ -473,7 +473,7 @@ exports.personalizedFeedback = async (profile, targetRole) => {
   };
 };
 
-exports.explainableRanking = async (candidates) => {
+exports.explainableRanking = async (candidates, userId = null, options = {}) => {
   const fallback = {
     candidates: (candidates || []).map((candidate, index) => ({
       ...candidate,
@@ -484,7 +484,7 @@ exports.explainableRanking = async (candidates) => {
     summary: 'Explainable ranking unavailable.'
   };
 
-  const data = await callGemini(prompts.explainableRankingPrompt, { candidates }, fallback);
+  const data = await callGemini(prompts.explainableRankingPrompt, { candidates }, fallback, userId, options);
   const ranked = Array.isArray(data.candidates) ? data.candidates : fallback.candidates;
   return {
     ...data,
@@ -499,7 +499,7 @@ exports.explainableRanking = async (candidates) => {
   };
 };
 
-exports.projectQualityAnalysis = async (project) => {
+exports.projectQualityAnalysis = async (project, userId = null, options = {}) => {
   const fallback = {
     qualityScore: 75,
     strengths: [],
@@ -508,7 +508,7 @@ exports.projectQualityAnalysis = async (project) => {
     summary: 'Project quality analysis unavailable.'
   };
 
-  const data = await callGemini(prompts.projectQualityPrompt, { project }, fallback);
+  const data = await callGemini(prompts.projectQualityPrompt, { project }, fallback, userId, options);
   return {
     ...data,
     module: 'project-quality-analysis',
@@ -520,7 +520,7 @@ exports.projectQualityAnalysis = async (project) => {
   };
 };
 
-exports.skillGapAnalysis = async (candidateSkills, targetSkills) => {
+exports.skillGapAnalysis = async (candidateSkills, targetSkills, userId = null, options = {}) => {
   const fallback = {
     gapScore: 40,
     missingSkills: [],
@@ -528,7 +528,7 @@ exports.skillGapAnalysis = async (candidateSkills, targetSkills) => {
     summary: 'Skill gap analysis unavailable.'
   };
 
-  const data = await callGemini(prompts.skillGapPrompt, { candidateSkills, targetSkills }, fallback);
+  const data = await callGemini(prompts.skillGapPrompt, { candidateSkills, targetSkills }, fallback, userId, options);
   return {
     ...data,
     module: 'skill-gap-analysis',
@@ -539,7 +539,7 @@ exports.skillGapAnalysis = async (candidateSkills, targetSkills) => {
   };
 };
 
-exports.generateCareerRoadmap = async (profile) => {
+exports.generateCareerRoadmap = async (profile, userId = null, options = {}) => {
   const fallback = {
     nodes: [
       { id: '1', type: 'skill', label: 'JavaScript Mastery', progress: 85, x: 100, y: 200 },
@@ -553,7 +553,7 @@ exports.generateCareerRoadmap = async (profile) => {
     summary: 'Fallback career roadmap output.'
   };
 
-  const data = await callGemini(prompts.careerRoadmapPrompt, { profile }, fallback);
+  const data = await callGemini(prompts.careerRoadmapPrompt, { profile }, fallback, userId, options);
   return {
     ...data,
     module: 'career-roadmap',
@@ -564,7 +564,7 @@ exports.generateCareerRoadmap = async (profile) => {
   };
 };
 
-exports.analyzeRoadmap = async (roadmap) => {
+exports.analyzeRoadmap = async (roadmap, userId = null, options = {}) => {
   const fallback = {
     analysis: 'Fallback roadmap analysis output.',
     bottlenecks: ['Cloud certification pending'],
@@ -572,7 +572,7 @@ exports.analyzeRoadmap = async (roadmap) => {
     confidence: 0.5
   };
 
-  const data = await callGemini(prompts.roadmapAnalysisPrompt, { roadmap }, fallback);
+  const data = await callGemini(prompts.roadmapAnalysisPrompt, { roadmap }, fallback, userId, options);
   return {
     ...data,
     module: 'roadmap-analyzer',
@@ -583,13 +583,13 @@ exports.analyzeRoadmap = async (roadmap) => {
   };
 };
 
-exports.planCompanyGoals = async (company, goals) => {
+exports.planCompanyGoals = async (company, goals, userId = null, options = {}) => {
   const fallback = {
     plan: (goals || []).map((goal) => ({ goal, timeline: '6 months', milestones: 4, feasibility: 'high' })),
     summary: 'Fallback company goal planning output.'
   };
 
-  const data = await callGemini(prompts.companyGoalsPrompt, { company, goals }, fallback);
+  const data = await callGemini(prompts.companyGoalsPrompt, { company, goals }, fallback, userId, options);
   return {
     ...data,
     module: 'company-goal-planner',
@@ -598,7 +598,7 @@ exports.planCompanyGoals = async (company, goals) => {
   };
 };
 
-exports.getLeaderboard = async () => {
+exports.getLeaderboard = async (userId = null, options = {}) => {
   const fallback = {
     leaderboard: [
       { rank: 1, name: 'Alex Chen', score: 94, growth: '+12%' },
@@ -609,7 +609,7 @@ exports.getLeaderboard = async () => {
     ]
   };
 
-  const data = await callGemini(prompts.leaderboardPrompt, null, fallback);
+  const data = await callGemini(prompts.leaderboardPrompt, null, fallback, userId, options);
   return {
     ...data,
     module: 'career-leaderboard',
@@ -617,7 +617,7 @@ exports.getLeaderboard = async () => {
   };
 };
 
-exports.benchmarkComparison = async (profile) => {
+exports.benchmarkComparison = async (profile, userId = null, options = {}) => {
   const fallback = {
     benchmarks: {
       skills: { you: 78, average: 65, top10: 92 },
@@ -628,7 +628,7 @@ exports.benchmarkComparison = async (profile) => {
     summary: 'Fallback benchmark comparison output.'
   };
 
-  const data = await callGemini(prompts.benchmarkPrompt, { profile }, fallback);
+  const data = await callGemini(prompts.benchmarkPrompt, { profile }, fallback, userId, options);
   return {
     ...data,
     module: 'benchmark-comparison',
@@ -637,7 +637,7 @@ exports.benchmarkComparison = async (profile) => {
   };
 };
 
-exports.generateLearningRoadmap = async (skills) => {
+exports.generateLearningRoadmap = async (skills, userId = null, options = {}) => {
   const fallback = {
     modules: (skills || []).map((skill, index) => ({
       skill,
@@ -648,7 +648,7 @@ exports.generateLearningRoadmap = async (skills) => {
     summary: 'Fallback learning roadmap output.'
   };
 
-  const data = await callGemini(prompts.learningRoadmapPrompt, { skills }, fallback);
+  const data = await callGemini(prompts.learningRoadmapPrompt, { skills }, fallback, userId, options);
   return {
     ...data,
     module: 'learning-roadmap',
@@ -657,7 +657,7 @@ exports.generateLearningRoadmap = async (skills) => {
   };
 };
 
-exports.predictCareerGrowth = async (profile) => {
+exports.predictCareerGrowth = async (profile, userId = null, options = {}) => {
   const fallback = {
     predictions: [
       { year: 1, role: 'Senior Developer', probability: 0.85, salary: '$120K-$150K' },
@@ -667,7 +667,7 @@ exports.predictCareerGrowth = async (profile) => {
     summary: 'Fallback career growth prediction output.'
   };
 
-  const data = await callGemini(prompts.careerGrowthPrompt, { profile }, fallback);
+  const data = await callGemini(prompts.careerGrowthPrompt, { profile }, fallback, userId, options);
   return {
     ...data,
     module: 'career-growth-predictor',
@@ -676,7 +676,7 @@ exports.predictCareerGrowth = async (profile) => {
   };
 };
 
-exports.calculateLearningScore = async (profile) => {
+exports.calculateLearningScore = async (profile, userId = null, options = {}) => {
   const fallback = {
     score: 78,
     streak: 14,
@@ -685,7 +685,7 @@ exports.calculateLearningScore = async (profile) => {
     summary: 'Fallback learning score output.'
   };
 
-  const data = await callGemini(prompts.learningScorePrompt, { profile }, fallback);
+  const data = await callGemini(prompts.learningScorePrompt, { profile }, fallback, userId, options);
   return {
     ...data,
     module: 'continuous-learning-score',
@@ -697,14 +697,14 @@ exports.calculateLearningScore = async (profile) => {
   };
 };
 
-exports.recruiterAssistant = async (query, context) => {
+exports.recruiterAssistant = async (query, context, userId = null, options = {}) => {
   const fallback = {
     response: `I recommend focusing on candidates with strong technical backgrounds.`,
     suggestions: ['Schedule interviews for top candidates', 'Update the role requirements'],
     summary: 'Fallback recruiter assistant output.'
   };
 
-  const data = await callGemini(prompts.recruiterAssistantPrompt, { query, context }, fallback);
+  const data = await callGemini(prompts.recruiterAssistantPrompt, { query, context }, fallback, userId, options);
   return {
     ...data,
     module: 'recruiter-assistant',
@@ -714,7 +714,7 @@ exports.recruiterAssistant = async (query, context) => {
   };
 };
 
-exports.recommendJobs = async (profile) => {
+exports.recommendJobs = async (profile, userId = null, options = {}) => {
   const fallback = {
     recommendations: [
       { title: 'Senior Full Stack Engineer', company: 'TechVision', match: 92, rationale: 'Strong fit' },
@@ -724,7 +724,7 @@ exports.recommendJobs = async (profile) => {
     summary: 'Fallback job recommendation output.'
   };
 
-  const data = await callGemini(prompts.jobRecommendationPrompt, { profile }, fallback);
+  const data = await callGemini(prompts.jobRecommendationPrompt, { profile }, fallback, userId, options);
   return {
     ...data,
     module: 'job-recommendation',
@@ -733,7 +733,7 @@ exports.recommendJobs = async (profile) => {
   };
 };
 
-exports.reverseMatch = async (job) => {
+exports.reverseMatch = async (job, userId = null, options = {}) => {
   const fallback = {
     candidates: [
       { name: 'Candidate A', match: 94, availability: 'immediate' },
@@ -743,7 +743,7 @@ exports.reverseMatch = async (job) => {
     summary: 'Fallback reverse matching output.'
   };
 
-  const data = await callGemini(prompts.reverseMatchPrompt, { job }, fallback);
+  const data = await callGemini(prompts.reverseMatchPrompt, { job }, fallback, userId, options);
   return {
     ...data,
     module: 'reverse-matching',
@@ -752,7 +752,7 @@ exports.reverseMatch = async (job) => {
   };
 };
 
-exports.collectResumes = async (sources) => {
+exports.collectResumes = async (sources, userId = null, options = {}) => {
   const fallback = {
     collected: Array.isArray(sources) ? sources.length : 0,
     processed: 0,
@@ -760,7 +760,7 @@ exports.collectResumes = async (sources) => {
     summary: 'Fallback resume collection output.'
   };
 
-  const data = await callGemini(prompts.resumeCollectionPrompt, { sources }, fallback);
+  const data = await callGemini(prompts.resumeCollectionPrompt, { sources }, fallback, userId, options);
   return {
     ...data,
     module: 'auto-resume-collection',
@@ -771,7 +771,7 @@ exports.collectResumes = async (sources) => {
   };
 };
 
-exports.hiringAnalytics = async (companyId) => {
+exports.hiringAnalytics = async (companyId, userId = null, options = {}) => {
   const fallback = {
     metrics: {
       totalApplications: 342,
@@ -793,7 +793,7 @@ exports.hiringAnalytics = async (companyId) => {
     summary: 'Fallback hiring analytics output.'
   };
 
-  const data = await callGemini(prompts.hiringAnalyticsPrompt, { companyId }, fallback);
+  const data = await callGemini(prompts.hiringAnalyticsPrompt, { companyId }, fallback, userId, options);
   return {
     ...data,
     module: 'hiring-analytics',
@@ -803,7 +803,7 @@ exports.hiringAnalytics = async (companyId) => {
   };
 };
 
-exports.suggestInterviewSlots = async (participants) => {
+exports.suggestInterviewSlots = async (participants, userId = null, options = {}) => {
   const fallback = {
     slots: [
       { date: '2026-07-10', times: ['09:00', '11:00', '14:00'] },
@@ -813,7 +813,7 @@ exports.suggestInterviewSlots = async (participants) => {
     summary: 'Fallback interview scheduling output.'
   };
 
-  const data = await callGemini(prompts.interviewSlotsPrompt, { participants }, fallback);
+  const data = await callGemini(prompts.interviewSlotsPrompt, { participants }, fallback, userId, options);
   return {
     ...data,
     module: 'interview-scheduling',
@@ -823,7 +823,7 @@ exports.suggestInterviewSlots = async (participants) => {
   };
 };
 
-exports.trackApplication = async (application) => {
+exports.trackApplication = async (application, userId = null, options = {}) => {
   const fallback = {
     status: application?.status || 'applied',
     nextSteps: ['Awaiting recruiter review'],
@@ -831,7 +831,7 @@ exports.trackApplication = async (application) => {
     summary: 'Fallback application tracking output.'
   };
 
-  const data = await callGemini(prompts.applicationTrackingPrompt, { application }, fallback);
+  const data = await callGemini(prompts.applicationTrackingPrompt, { application }, fallback, userId, options);
   return {
     ...data,
     module: 'application-tracking',
@@ -842,7 +842,7 @@ exports.trackApplication = async (application) => {
   };
 };
 
-exports.generateJob = async (prompt) => {
+exports.generateJob = async (prompt, userId = null, options = {}) => {
   const fallback = {
     job: {
       title: 'Senior Full Stack Engineer',
@@ -853,7 +853,7 @@ exports.generateJob = async (prompt) => {
     summary: 'Fallback AI job creation output.'
   };
 
-  const data = await callGemini(prompts.jobCreationPrompt, { prompt }, fallback);
+  const data = await callGemini(prompts.jobCreationPrompt, { prompt }, fallback, userId, options);
   return {
     ...data,
     module: 'ai-job-creation',
@@ -862,14 +862,14 @@ exports.generateJob = async (prompt) => {
   };
 };
 
-exports.candidateAI = async (action, context) => {
+exports.candidateAI = async (action, context, userId = null, options = {}) => {
   const fallback = {
     response: 'AI assistant ready to help you improve your candidacy.',
     suggestions: ['Review your resume', 'Practice interview scenarios'],
     summary: 'Fallback candidate AI output.'
   };
 
-  const data = await callGemini(prompts.candidateAssistantPrompt, { action, context }, fallback);
+  const data = await callGemini(prompts.candidateAssistantPrompt, { action, context }, fallback, userId, options);
   return {
     ...data,
     module: 'candidate-ai',
@@ -877,4 +877,25 @@ exports.candidateAI = async (action, context) => {
     suggestions: Array.isArray(data.suggestions) ? data.suggestions : fallback.suggestions,
     summary: data.summary || fallback.summary
   };
+};
+
+const buildAiCacheKey = (userId, featureName) => `${userId}:${featureName}`;
+
+const shouldUseAiCache = (state, cooldownMs = 30000) => {
+  if (state && state.lastRequestedAt) {
+    const msSinceLast = Date.now() - new Date(state.lastRequestedAt).getTime();
+    if (msSinceLast < cooldownMs) {
+      return { shouldUseCache: true, reason: 'cooldown' };
+    }
+  }
+  return { shouldUseCache: false };
+};
+
+const getCooldownMessage = () => 'AI is temporarily busy. Please wait a few seconds and try again.';
+
+module.exports = {
+  ...module.exports,
+  buildAiCacheKey,
+  shouldUseAiCache,
+  getCooldownMessage
 };

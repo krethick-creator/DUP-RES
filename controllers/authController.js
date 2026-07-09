@@ -3,6 +3,8 @@ const { sendTokenResponse } = require('../utils/token');
 const { generateResetToken, generateVerificationToken } = require('../utils/crypto');
 const { sendEmail } = require('../utils/email');
 const crypto = require('crypto');
+const Notification = require('../models/Notification');
+const Job = require('../models/Job');
 
 exports.register = async (req, res) => {
   try {
@@ -116,6 +118,40 @@ exports.updateProfile = async (req, res) => {
     fields.forEach((f) => { if (req.body[f] !== undefined) req.user[f] = req.body[f]; });
     await req.user.save();
     res.json({ success: true, user: req.user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getNotifications = async (req, res) => {
+  try {
+    const notifications = await Notification.find({ user: req.user._id }).sort('-createdAt').limit(50);
+    const unread = await Notification.countDocuments({ user: req.user._id, isRead: false });
+    res.json({ success: true, notifications, unread });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.markNotificationRead = async (req, res) => {
+  try {
+    await Notification.findByIdAndUpdate(req.params.id, { isRead: true });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.globalSearch = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json({ success: true, results: [] });
+    const regex = new RegExp(q, 'i');
+    const [users, jobs] = await Promise.all([
+      User.find({ $or: [{ name: regex }, { email: regex }] }).select('name email role').limit(5),
+      Job.find({ $or: [{ title: regex }, { description: regex }] }).populate('company', 'name').limit(5)
+    ]);
+    res.json({ success: true, results: { users, jobs } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

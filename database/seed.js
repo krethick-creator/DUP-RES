@@ -30,15 +30,7 @@ const seed = async () => {
       subscription: 'pro'
     });
 
-    const admin = await User.create({
-      name: 'Platform Admin',
-      email: 'admin@recruitment.com',
-      password: 'admin123',
-      role: 'admin',
-      isVerified: true
-    });
-
-    const recruiter = await User.create({
+        const recruiter = await User.create({
       name: 'Sarah Mitchell',
       email: 'recruiter@techvision.com',
       password: 'recruiter123',
@@ -133,8 +125,7 @@ const seed = async () => {
 
     await Notification.insertMany([
       { user: candidate._id, title: 'Application Update', message: 'Your application for Senior Full Stack Engineer is being reviewed', type: 'application' },
-      { user: recruiter._id, title: 'New Application', message: 'Alex Chen applied for Senior Full Stack Engineer', type: 'application' },
-      { user: admin._id, title: 'Platform Ready', message: 'AI Recruitment Platform seeded successfully', type: 'success' }
+      { user: recruiter._id, title: 'New Application', message: 'Alex Chen applied for Senior Full Stack Engineer', type: 'application' }
     ]);
 
     const defaultSettings = [
@@ -160,7 +151,6 @@ const seed = async () => {
 
     console.log('\n✅ Seed completed!\n');
     console.log('Demo Accounts:');
-    console.log('  Admin:     admin@recruitment.com / admin123');
     console.log('  Recruiter: recruiter@techvision.com / recruiter123');
     console.log('  Candidate: alex@example.com / candidate123\n');
 

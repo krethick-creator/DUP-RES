@@ -8,8 +8,7 @@ const Router = {
     'register': { render: (p) => AuthPage.render({ mode: 'register', role: p.role }), bind: () => AuthPage.bind() },
     'forgot-password': { render: () => AuthPage.forgotPasswordRender(), bind: () => AuthPage.bindForgot() },
     'candidate': { render: (p) => CandidateDashboard.render(p.section || 'overview'), bind: () => CandidateDashboard.bind(), auth: 'candidate' },
-    'recruiter': { render: (p) => RecruiterDashboard.render(p.section || 'overview'), bind: () => RecruiterDashboard.bind(), auth: 'recruiter' },
-    'admin': { render: (p) => AdminDashboard.render(p.section || 'overview'), bind: () => AdminDashboard.bind(), auth: 'admin' }
+    'recruiter': { render: (p) => RecruiterDashboard.render(p.section || 'overview'), bind: () => RecruiterDashboard.bind(), auth: 'recruiter' }
   },
 
   parseHash() {
@@ -37,8 +36,8 @@ const Router = {
         window.location.hash = `#/login?role=${config.auth}`;
         return;
       }
-      if (user.role !== config.auth && user.role !== 'admin') {
-        const roleRoutes = { candidate: 'candidate', recruiter: 'recruiter', admin: 'admin' };
+      if (user.role !== config.auth) {
+        const roleRoutes = { candidate: 'candidate', recruiter: 'recruiter' };
         window.location.hash = `#/${roleRoutes[user.role]}`;
         return;
       }

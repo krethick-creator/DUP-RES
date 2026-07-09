@@ -31,7 +31,6 @@ app.use('/api/resumes', require('../routes/resumes'));
 app.use('/api/jobs', require('../routes/jobs'));
 app.use('/api/applications', require('../routes/applications'));
 app.use('/api/ai', require('../routes/ai'));
-app.use('/api', require('../routes/admin'));
 
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));

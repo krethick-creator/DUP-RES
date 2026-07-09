@@ -103,15 +103,8 @@ const API = {
   getHiringAnalytics: () => API.get('/ai/hiring-analytics'),
   scheduleInterview: (data) => API.post('/ai/schedule-interview', data),
 
-  // Admin
-  globalSearch: (q) => API.get(`/search?q=${encodeURIComponent(q)}`),
-  getNotifications: () => API.get('/notifications'),
-  markNotificationRead: (id) => API.put(`/notifications/${id}/read`),
-  getUsers: (params = '') => API.get(`/users${params ? '?' + params : ''}`),
-  getCompanies: () => API.get('/companies'),
-  createCompany: (data) => API.post('/companies', data),
-  getStats: () => API.get('/stats'),
-  getLogs: () => API.get('/logs'),
-  getSettings: () => API.get('/settings'),
-  updateSettings: (settings) => API.put('/settings', { settings })
+  // Profile / General
+  globalSearch: (q) => API.get(`/auth/search?q=${encodeURIComponent(q)}`),
+  getNotifications: () => API.get('/auth/notifications'),
+  markNotificationRead: (id) => API.put(`/auth/notifications/${id}/read`)
 };

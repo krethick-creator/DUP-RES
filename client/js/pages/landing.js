@@ -54,7 +54,6 @@ const LandingPage = {
           <div class="flex justify-center gap-6 mt-4">
             <a href="#/login?role=candidate" class="btn btn-secondary">I'm a Candidate</a>
             <a href="#/login?role=recruiter" class="btn btn-primary">I'm a Recruiter</a>
-            <a href="#/login?role=admin" class="btn btn-ghost">Admin Portal</a>
           </div>
         </div>
       </section>`;

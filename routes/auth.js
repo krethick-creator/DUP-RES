@@ -24,4 +24,8 @@ router.post('/forgot-password', body('email').isEmail(), validate, auth.forgotPa
 router.put('/reset-password/:token', body('password').isLength({ min: 6 }), validate, auth.resetPassword);
 router.get('/verify/:token', auth.verifyEmail);
 
+router.get('/notifications', protect, auth.getNotifications);
+router.put('/notifications/:id/read', protect, auth.markNotificationRead);
+router.get('/search', protect, auth.globalSearch);
+
 module.exports = router;

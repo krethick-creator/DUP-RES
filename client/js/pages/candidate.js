@@ -431,14 +431,25 @@ const CandidateDashboard = {
     });
 
     // GitHub connect
-    document.getElementById('connect-github')?.addEventListener('click', async () => {
+    document.getElementById('connect-github')?.addEventListener('click', async (e) => {
       const username = prompt('Enter your GitHub username:', 'alexchen-dev');
       if (!username) return;
+      e.target.disabled = true;
+      const originalText = e.target.textContent;
+      e.target.textContent = 'Connecting...';
       try {
         await API.connectGitHub(username);
-        UI.toast('GitHub connected!', 'success');
-        this.loadGitHub();
-      } catch (err) { UI.toast(err.message, 'error'); }
+        UI.toast('GitHub connected and analyzed!', 'success');
+        await this.loadGitHub();
+      } catch (err) {
+        const msg = err.status === 429 || err.message.includes('429')
+          ? "AI is temporarily busy. Please wait a few seconds and try again."
+          : err.message;
+        UI.toast(msg, 'error');
+      } finally {
+        e.target.disabled = false;
+        e.target.textContent = originalText;
+      }
     });
   },
 
@@ -470,56 +481,180 @@ const CandidateDashboard = {
     });
   },
 
-  async loadRoadmap() {
+  async loadRoadmap(force = false) {
+    const vizEl = document.getElementById('roadmap-viz');
+    const gapsEl = document.getElementById('skill-gaps');
+    const analysisEl = document.getElementById('roadmap-analysis');
+    const progEl = document.getElementById('roadmap-progress');
+    
+    if (vizEl) vizEl.innerHTML = '<div class="spinner"></div>';
+    if (gapsEl) gapsEl.innerHTML = '<div class="spinner"></div>';
+    if (analysisEl) analysisEl.innerHTML = '<div class="spinner"></div>';
+    
     try {
-      const data = await API.getRoadmap();
+      const queryStr = force ? '?generate=true' : '';
+      const data = await API.get(`/ai/roadmap${queryStr}`);
       const roadmap = data.roadmap;
-      document.getElementById('roadmap-progress').textContent = `${roadmap.progress || 0}% Complete`;
-      RoadmapViz.init('roadmap-viz', roadmap);
-
-      const analysis = await API.get('/ai/roadmap/analyze').catch(() => null);
-      if (analysis) {
-        document.getElementById('roadmap-analysis').innerHTML = `
-          <p>${analysis.analysis?.analysis || 'Analysis pending'}</p>
-          <ul class="mt-2">${(analysis.analysis?.recommendations || []).map(r => `<li>${r}</li>`).join('')}</ul>`;
+      
+      if (!roadmap) {
+        if (progEl) progEl.textContent = 'Not Started';
+        if (vizEl) {
+          vizEl.innerHTML = `
+            <div style="padding: 40px; text-align: center;">
+              <p class="text-secondary mb-4">You have not generated your Career Roadmap yet.</p>
+              <button class="btn btn-primary" id="generate-roadmap-btn">Generate Career Roadmap</button>
+            </div>`;
+          document.getElementById('generate-roadmap-btn')?.addEventListener('click', async (e) => {
+            e.target.disabled = true;
+            e.target.textContent = 'Generating...';
+            await this.loadRoadmap(true);
+          });
+        }
+        if (gapsEl) gapsEl.innerHTML = '<p class="text-secondary">Generate roadmap to see skill gaps</p>';
+        if (analysisEl) analysisEl.innerHTML = '<p class="text-secondary">Generate roadmap to see AI analysis</p>';
+        return;
       }
-
-      document.getElementById('skill-gaps').innerHTML = (roadmap.skillGaps || [
-        { skill: 'Cloud', current: 40, required: 80 },
-        { skill: 'System Design', current: 55, required: 85 }
-      ]).map(g => `
-        <div class="mb-3"><div class="flex justify-between text-sm"><span>${g.skill}</span><span>${g.current}/${g.required}</span></div>
-        ${UI.progressBar(g.current, g.required)}</div>
-      `).join('');
-    } catch (_) { }
+      
+      if (progEl) progEl.textContent = `${roadmap.progress || 0}% Complete`;
+      RoadmapViz.init('roadmap-viz', roadmap);
+      
+      const analysis = await API.get(`/ai/roadmap/analyze${queryStr}`).catch(() => null);
+      if (analysis && analysis.analysis) {
+        if (analysisEl) {
+          analysisEl.innerHTML = `
+            <p>${analysis.analysis.analysis || 'Analysis pending'}</p>
+            <ul class="mt-2">${(analysis.analysis.recommendations || []).map(r => `<li>${r}</li>`).join('')}</ul>
+            <button class="btn btn-secondary btn-sm mt-4" id="regenerate-roadmap-analysis-btn">Regenerate Analysis</button>`;
+          document.getElementById('regenerate-roadmap-analysis-btn')?.addEventListener('click', async (e) => {
+            e.target.disabled = true;
+            e.target.textContent = 'Analyzing...';
+            await this.loadRoadmap(true);
+          });
+        }
+      } else {
+        if (analysisEl) {
+          analysisEl.innerHTML = `
+            <p class="text-secondary mb-2">No AI Roadmap analysis found.</p>
+            <button class="btn btn-primary btn-sm" id="generate-roadmap-analysis-btn">Generate AI Analysis</button>`;
+          document.getElementById('generate-roadmap-analysis-btn')?.addEventListener('click', async (e) => {
+            e.target.disabled = true;
+            e.target.textContent = 'Generating...';
+            await this.loadRoadmap(true);
+          });
+        }
+      }
+      
+      if (gapsEl) {
+        gapsEl.innerHTML = (roadmap.skillGaps || [
+          { skill: 'Cloud', current: 40, required: 80 },
+          { skill: 'System Design', current: 55, required: 85 }
+        ]).map(g => `
+          <div class="mb-3"><div class="flex justify-between text-sm"><span>${g.skill}</span><span>${g.current}/${g.required}</span></div>
+          ${UI.progressBar(g.current, g.required)}</div>
+        `).join('');
+      }
+    } catch (err) {
+      const msg = err.status === 429 || err.message.includes('429')
+        ? "AI is temporarily busy. Please wait a few seconds and try again."
+        : err.message;
+      UI.toast(msg, 'error');
+      if (vizEl) vizEl.innerHTML = `<p class="text-error">${msg}</p>`;
+    }
   },
 
-  async loadLearning() {
+  async loadLearning(force = false) {
+    const statsEl = document.getElementById('learning-stats');
+    const modulesEl = document.getElementById('learning-modules');
+    
+    if (statsEl) statsEl.innerHTML = '<div class="spinner"></div>';
+    if (modulesEl) modulesEl.innerHTML = '<div class="spinner"></div>';
+    
     try {
-      const [score, roadmap] = await Promise.all([API.getLearningScore(), API.get('/ai/learning-roadmap')]);
-      document.getElementById('learning-stats').innerHTML = `
-        ${UI.statCard('Learning Score', score.score, `Streak: ${score.streak} days`, true)}
-        ${UI.statCard('Weekly Hours', score.weeklyHours, 'On track', true)}
-        ${UI.statCard('Certifications', score.certificationsInProgress, 'In progress')}
-        ${UI.statCard('Modules', roadmap.modules?.length || 0, 'Active')}`;
-
+      const queryStr = force ? '?generate=true' : '';
+      const score = await API.get(`/ai/learning-score${queryStr}`);
+      const roadmap = await API.get(`/ai/learning-roadmap${queryStr}`);
+      
+      if (!score.score && (!roadmap.modules || roadmap.modules.length === 0)) {
+        if (statsEl) {
+          statsEl.innerHTML = `
+            <div class="card p-8 text-center" style="grid-column: span 4">
+              <p class="text-secondary mb-4">No continuous learning analysis available.</p>
+              <button class="btn btn-primary" id="generate-learning-btn">Generate AI Learning Analysis</button>
+            </div>`;
+          document.getElementById('generate-learning-btn')?.addEventListener('click', async (e) => {
+            e.target.disabled = true;
+            e.target.textContent = 'Generating...';
+            await this.loadLearning(true);
+          });
+        }
+        if (modulesEl) modulesEl.innerHTML = '<p class="text-secondary">Generate analysis to see learning modules</p>';
+        return;
+      }
+      
+      if (statsEl) {
+        statsEl.innerHTML = `
+          ${UI.statCard('Learning Score', score.score, `Streak: ${score.streak} days`, true)}
+          ${UI.statCard('Weekly Hours', score.weeklyHours, 'On track', true)}
+          ${UI.statCard('Certifications', score.certificationsInProgress, 'In progress')}
+          ${UI.statCard('Modules', roadmap.modules?.length || 0, 'Active')}`;
+      }
+      
       if (roadmap.modules) {
-        document.getElementById('learning-modules').innerHTML = roadmap.modules.map(m => `
-          <div class="leaderboard-item">
-            <div><strong>${m.skill}</strong><div class="text-sm text-muted">${m.courses?.join(', ')}</div></div>
-            <span class="badge badge-${m.priority === 'high' ? 'primary' : 'warning'}">${m.priority}</span>
-            <span class="text-sm">${m.estimatedWeeks}w</span>
-          </div>
-        `).join('');
+        if (modulesEl) {
+          modulesEl.innerHTML = `
+            <div class="flex justify-between items-center mb-4">
+              <h3>Active Modules</h3>
+              <button class="btn btn-secondary btn-sm" id="regenerate-learning-btn">Regenerate Analysis</button>
+            </div>` +
+            roadmap.modules.map(m => `
+              <div class="leaderboard-item">
+                <div><strong>${m.skill}</strong><div class="text-sm text-muted">${m.courses?.join(', ')}</div></div>
+                <span class="badge badge-${m.priority === 'high' ? 'primary' : 'warning'}">${m.priority}</span>
+                <span class="text-sm">${m.estimatedWeeks}w</span>
+              </div>
+            `).join('');
+            
+          document.getElementById('regenerate-learning-btn')?.addEventListener('click', async (e) => {
+            e.target.disabled = true;
+            e.target.textContent = 'Regenerating...';
+            await this.loadLearning(true);
+          });
+        }
         Charts.progress('learning-roadmap-chart', roadmap.modules.map(m => m.skill), roadmap.modules.map(() => Math.floor(30 + Math.random() * 60)));
       }
-    } catch (_) { }
+    } catch (err) {
+      const msg = err.status === 429 || err.message.includes('429')
+        ? "AI is temporarily busy. Please wait a few seconds and try again."
+        : err.message;
+      UI.toast(msg, 'error');
+      if (statsEl) statsEl.innerHTML = `<p class="text-error">${msg}</p>`;
+    }
   },
 
-  async loadBenchmarks() {
+  async loadBenchmarks(force = false) {
+    const chartContainer = document.querySelector('#benchmark-chart')?.parentElement;
+    if (!chartContainer) return;
+    
     try {
-      const data = await API.getBenchmarks();
-      const b = data.benchmarks || {};
+      const queryStr = force ? '?generate=true' : '';
+      const data = await API.get(`/ai/benchmarks${queryStr}`);
+      const b = data.benchmarks;
+      
+      if (!b || !b.skills) {
+        chartContainer.innerHTML = `
+          <div class="text-center p-8">
+            <p class="text-secondary mb-4">No benchmarks comparison has been generated yet.</p>
+            <button class="btn btn-primary" id="generate-benchmarks-btn">Generate Benchmarks</button>
+          </div>`;
+        document.getElementById('generate-benchmarks-btn')?.addEventListener('click', async (e) => {
+          e.target.disabled = true;
+          e.target.textContent = 'Generating...';
+          await this.loadBenchmarks(true);
+        });
+        return;
+      }
+      
+      chartContainer.innerHTML = '<div class="chart-wrapper"><canvas id="benchmark-chart"></canvas></div>';
       requestAnimationFrame(() => {
         Charts.bar('benchmark-chart',
           ['Skills', 'Experience', 'Projects', 'Certifications'],
@@ -530,37 +665,90 @@ const CandidateDashboard = {
           ]
         );
       });
-    } catch (_) { }
+    } catch (err) {
+      const msg = err.status === 429 || err.message.includes('429')
+        ? "AI is temporarily busy. Please wait a few seconds and try again."
+        : err.message;
+      UI.toast(msg, 'error');
+    }
   },
 
-  async loadGrowth() {
+  async loadGrowth(force = false) {
+    const predEl = document.getElementById('growth-predictions');
+    const chartContainer = document.querySelector('#growth-chart')?.parentElement;
+    
+    if (predEl) predEl.innerHTML = '<div class="spinner"></div>';
+    
     try {
-      const data = await API.getCareerGrowth();
-      document.getElementById('growth-predictions').innerHTML = (data.predictions || []).map(p => `
-        <div class="glass-card p-6 hover-lift">
-          <div class="text-sm text-muted">Year ${p.year}</div>
-          <h3 class="mt-2">${p.role}</h3>
-          <div class="mt-4">${UI.progressBar(p.probability * 100)}</div>
-          <div class="flex justify-between mt-2 text-sm">
-            <span>${Math.round(p.probability * 100)}% probability</span>
-            <span class="text-secondary">${p.salary}</span>
+      const queryStr = force ? '?generate=true' : '';
+      const data = await API.get(`/ai/career-growth${queryStr}`);
+      
+      if (!data.predictions) {
+        if (predEl) {
+          predEl.innerHTML = `
+            <div class="card p-8 text-center" style="grid-column: span 3">
+              <p class="text-secondary mb-4">No career growth trajectory has been forecast yet.</p>
+              <button class="btn btn-primary" id="generate-growth-btn">Predict Career Growth</button>
+            </div>`;
+          document.getElementById('generate-growth-btn')?.addEventListener('click', async (e) => {
+            e.target.disabled = true;
+            e.target.textContent = 'Predicting...';
+            await this.loadGrowth(true);
+          });
+        }
+        if (chartContainer) chartContainer.innerHTML = '<p class="text-secondary text-center p-4">No prediction chart data available</p>';
+        return;
+      }
+      
+      if (predEl) {
+        predEl.innerHTML = (data.predictions || []).map(p => `
+          <div class="glass-card p-6 hover-lift">
+            <div class="text-sm text-muted">Year ${p.year}</div>
+            <h3 class="mt-2">${p.role}</h3>
+            <div class="mt-4">${UI.progressBar(p.probability * 100)}</div>
+            <div class="flex justify-between mt-2 text-sm">
+              <span>${Math.round(p.probability * 100)}% probability</span>
+              <span class="text-secondary">${p.salary}</span>
+            </div>
           </div>
-        </div>
-      `).join('');
-      requestAnimationFrame(() => {
-        Charts.line('growth-chart', (data.predictions || []).map(p => `Year ${p.year}`), [{
-          label: 'Probability', data: (data.predictions || []).map(p => p.probability * 100),
-          borderColor: '#2563EB', tension: 0.4
-        }]);
-      });
-    } catch (_) { }
+        `).join('') + `
+          <div style="grid-column: span 3; text-align: right; margin-top: 10px;">
+            <button class="btn btn-secondary btn-sm" id="regenerate-growth-btn">Regenerate Forecast</button>
+          </div>`;
+          
+        document.getElementById('regenerate-growth-btn')?.addEventListener('click', async (e) => {
+          e.target.disabled = true;
+          e.target.textContent = 'Regenerating...';
+          await this.loadGrowth(true);
+        });
+      }
+      
+      if (chartContainer) {
+        chartContainer.innerHTML = '<canvas id="growth-chart"></canvas>';
+        requestAnimationFrame(() => {
+          Charts.line('growth-chart', (data.predictions || []).map(p => `Year ${p.year}`), [{
+            label: 'Probability', data: (data.predictions || []).map(p => p.probability * 100),
+            borderColor: '#2563EB', tension: 0.4
+          }]);
+        });
+      }
+    } catch (err) {
+      const msg = err.status === 429 || err.message.includes('429')
+        ? "AI is temporarily busy. Please wait a few seconds and try again."
+        : err.message;
+      UI.toast(msg, 'error');
+      if (predEl) predEl.innerHTML = `<p class="text-error">${msg}</p>`;
+    }
   },
 
   async loadGitHub() {
     try {
       const data = await API.getGitHubProfile();
       const p = data.profile;
-      if (!p) return;
+      if (!p) {
+        document.getElementById('github-repos').innerHTML = `<p class="text-secondary">No GitHub account connected. Use the button above to connect.</p>`;
+        return;
+      }
       document.getElementById('github-stats').innerHTML = `
         ${UI.statCard('Portfolio Score', p.portfolioScore || 0)}
         ${UI.statCard('Commits', p.totalCommits || 0)}
@@ -574,7 +762,25 @@ const CandidateDashboard = {
             <span class="badge badge-primary">#${r.rank}</span>
             <span class="text-sm">${r.qualityScore}/100</span>
           </div>
-        `).join('');
+        `).join('') + `
+          <div style="text-align: right; margin-top: 15px;">
+            <button class="btn btn-secondary btn-sm" id="sync-github-btn">Sync Repositories</button>
+          </div>`;
+          
+      document.getElementById('sync-github-btn')?.addEventListener('click', async (e) => {
+        e.target.disabled = true;
+        e.target.textContent = 'Syncing...';
+        try {
+          await API.post('/ai/github/sync');
+          UI.toast('GitHub repositories synced!', 'success');
+          await this.loadGitHub();
+        } catch (err) {
+          const msg = err.status === 429 || err.message.includes('429')
+            ? "AI is temporarily busy. Please wait a few seconds and try again."
+            : err.message;
+          UI.toast(msg, 'error');
+        }
+      });
 
       if (p.languages) {
         Charts.pie('github-lang-chart', p.languages.map(l => l.name), p.languages.map(l => l.percentage));
@@ -585,10 +791,16 @@ const CandidateDashboard = {
   async runResumeAI(action) {
     const el = document.getElementById('resume-ai-result');
     el.innerHTML = '<div class="spinner"></div>';
+    const buttons = document.querySelectorAll('[data-ai-action]');
+    buttons.forEach(btn => btn.disabled = true);
     try {
       const resumes = await API.getResumes();
       const resume = resumes.resumes?.[0];
-      if (!resume) { el.innerHTML = UI.emptyState('📄', 'No resume', 'Upload a resume first'); return; }
+      if (!resume) { 
+        el.innerHTML = UI.emptyState('📄', 'No resume', 'Upload a resume first'); 
+        buttons.forEach(btn => btn.disabled = false);
+        return; 
+      }
 
       let result;
       if (action === 'simulate') result = await API.simulateResume(resume._id);
@@ -596,6 +808,13 @@ const CandidateDashboard = {
       else result = await API.post(`/resumes/${resume._id}/dynamic`, { job: { title: 'Senior Developer' } });
 
       el.innerHTML = `<pre style="white-space:pre-wrap;font-size:0.875rem">${JSON.stringify(result, null, 2)}</pre>`;
-    } catch (err) { el.innerHTML = `<p class="text-error">${err.message}</p>`; }
+    } catch (err) { 
+      const msg = err.status === 429 || err.message.includes('429')
+        ? "AI is temporarily busy. Please wait a few seconds and try again."
+        : err.message;
+      el.innerHTML = `<p class="text-error">${msg}</p>`; 
+    } finally {
+      buttons.forEach(btn => btn.disabled = false);
+    }
   }
 };

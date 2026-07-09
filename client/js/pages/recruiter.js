@@ -441,6 +441,33 @@ const RecruiterDashboard = {
       } catch (err) { UI.toast(err.message, 'error'); }
     });
 
+    // Run AI Screening
+    document.getElementById('run-screening')?.addEventListener('click', async (e) => {
+      const jobId = document.getElementById('screen-job-select')?.value;
+      if (!jobId) return UI.toast('Select a job first', 'warning');
+      e.target.disabled = true;
+      e.target.textContent = 'Screening...';
+      const resultEl = document.getElementById('screening-result');
+      resultEl.innerHTML = '<div class="spinner"></div>';
+      try {
+        const data = await API.post(`/jobs/${jobId}/reverse-match`);
+        resultEl.innerHTML = `
+          <h3 class="mb-4">Screening Results</h3>
+          <p><strong>Status:</strong> Success</p>
+          ${(data.candidates || []).map(c => `<div class="leaderboard-item"><strong>${c.name}</strong><span class="badge badge-primary">${c.match}% match</span></div>`).join('') || '<p class="text-secondary">No candidates matched</p>'}
+        `;
+      } catch (err) {
+        const msg = err.status === 429 || err.message.includes('429')
+          ? "AI is temporarily busy. Please wait a few seconds and try again."
+          : err.message;
+        UI.toast(msg, 'error');
+        resultEl.innerHTML = `<p class="text-error">${msg}</p>`;
+      } finally {
+        e.target.disabled = false;
+        e.target.textContent = 'Run AI Screening';
+      }
+    });
+
     // Reports
     document.querySelectorAll('[data-report]').forEach(btn => {
       btn.addEventListener('click', async () => {

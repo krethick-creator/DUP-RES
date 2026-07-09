@@ -17,7 +17,7 @@ exports.aiCreateJob = async (req, res) => {
   try {
     const company = req.body.company || req.user.companyId;
     if (!company) return res.status(400).json({ success: false, message: 'Company is required' });
-    const generated = await aiService.generateJob(req.body.prompt);
+    const generated = await aiService.generateJob(req.body.prompt, req.user._id, { forceRegenerate: true });
     const job = await Job.create({
       ...generated.job,
       ...req.body,
@@ -27,6 +27,7 @@ exports.aiCreateJob = async (req, res) => {
     });
     res.status(201).json({ success: true, job, ai: generated });
   } catch (error) {
+    if (error.status === 429) return res.status(429).json({ success: false, message: error.message });
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -92,8 +93,8 @@ exports.applyJob = async (req, res) => {
     const job = await Job.findById(req.params.id);
     if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
 
-    const screening = await aiService.screenResume({}, job);
-    const skillMatch = await aiService.matchSkills(req.user.skills || [], job.skills || []);
+    const screening = await aiService.screenResume({}, job, req.user._id, { forceRegenerate: true });
+    const skillMatch = await aiService.matchSkills(req.user.skills || [], job.skills || [], req.user._id, { forceRegenerate: true });
 
     const application = await Application.create({
       candidate: req.user._id,
@@ -109,6 +110,7 @@ exports.applyJob = async (req, res) => {
     res.status(201).json({ success: true, application, screening });
   } catch (error) {
     if (error.code === 11000) return res.status(400).json({ success: false, message: 'Already applied' });
+    if (error.status === 429) return res.status(429).json({ success: false, message: error.message });
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -156,9 +158,10 @@ exports.rankCandidates = async (req, res) => {
       name: a.candidate.name,
       skills: a.candidate.skills,
       aiScore: a.aiScore
-    })));
+    })), req.user._id, { forceRegenerate: true });
     res.json({ success: true, ...ranked });
   } catch (error) {
+    if (error.status === 429) return res.status(429).json({ success: false, message: error.message });
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -166,9 +169,10 @@ exports.rankCandidates = async (req, res) => {
 exports.reverseMatch = async (req, res) => {
   try {
     const job = await Job.findById(req.params.id);
-    const matches = await aiService.reverseMatch(job);
+    const matches = await aiService.reverseMatch(job, req.user._id, { forceRegenerate: true });
     res.json({ success: true, ...matches });
   } catch (error) {
+    if (error.status === 429) return res.status(429).json({ success: false, message: error.message });
     res.status(500).json({ success: false, message: error.message });
   }
 };
