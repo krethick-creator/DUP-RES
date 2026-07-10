@@ -166,16 +166,27 @@ exports.generateDynamicResume = async (resume, job, userId = null, options = {})
     tailoredSummary: `Experienced developer optimized for ${job?.title || 'target role'}`,
     highlightedSkills: resume?.parsed?.skills?.slice(0, 5) || [],
     suggestedChanges: ['Emphasize leadership and measurable impact'],
+    resumeProjectSection: [],
     summary: 'Fallback dynamic resume tailoring output.'
   };
 
-  const data = await callGemini(prompts.dynamicResumePrompt, { resume, job }, fallback, userId, options);
+  const GitHubRepository = require('../models/GitHubRepository');
+  const reposData = userId ? await GitHubRepository.find({ user: userId }).limit(10) : [];
+  const repos = reposData.map(r => ({
+    name: r.name,
+    description: r.description,
+    language: r.language,
+    topics: r.topics
+  }));
+
+  const data = await callGemini(prompts.dynamicResumePrompt, { resume, job, repos }, fallback, userId, options);
   return {
     ...data,
     module: 'dynamic-resume',
     tailoredSummary: data.tailoredSummary || fallback.tailoredSummary,
     highlightedSkills: Array.isArray(data.highlightedSkills) ? data.highlightedSkills : fallback.highlightedSkills,
     suggestedChanges: Array.isArray(data.suggestedChanges) ? data.suggestedChanges : fallback.suggestedChanges,
+    resumeProjectSection: Array.isArray(data.resumeProjectSection) ? data.resumeProjectSection : fallback.resumeProjectSection,
     summary: data.summary || fallback.summary
   };
 };
@@ -262,18 +273,35 @@ exports.generateImprovementReport = async (resume, userId = null, options = {}) 
   };
 };
 
-exports.analyzeGitHub = async (username, userId = null, options = {}) => {
+exports.analyzeGitHub = async (reposPayload, user, userId = null, options = {}) => {
   const fallback = {
-    username,
+    username: user.githubUsername,
     repos: [],
     portfolioScore: 70,
     totalCommits: 0,
     totalPRs: 0,
     languages: [],
-    contributionAnalysis: { consistency: 70, impact: 70, collaboration: 70 }
+    contributionScore: 70,
+    projectComplexity: 70,
+    codingConsistency: 70,
+    repositoryQuality: 70,
+    commitFrequency: 70,
+    topRepository: '',
+    openSourceContributions: 0,
+    aiCandidateSummary: ''
   };
 
-  const data = await callGemini(prompts.githubAnalysisPrompt, { username }, fallback, userId, options);
+  const username = user.githubUsername;
+  const repos = reposPayload.map(r => ({
+    name: r.name,
+    description: r.description,
+    language: r.language,
+    stars: r.stars,
+    forks: r.forks,
+    topics: r.topics
+  }));
+
+  const data = await callGemini(prompts.githubAnalysisPrompt, { username, repos }, fallback, userId, options);
   return {
     ...data,
     module: 'github-analysis',
@@ -283,7 +311,14 @@ exports.analyzeGitHub = async (username, userId = null, options = {}) => {
     totalCommits: Number(data.totalCommits || fallback.totalCommits),
     totalPRs: Number(data.totalPRs || fallback.totalPRs),
     languages: Array.isArray(data.languages) ? data.languages : fallback.languages,
-    contributionAnalysis: data.contributionAnalysis || fallback.contributionAnalysis
+    contributionScore: Math.max(0, Math.min(100, toNumber(data.contributionScore, fallback.contributionScore))),
+    projectComplexity: Math.max(0, Math.min(100, toNumber(data.projectComplexity, fallback.projectComplexity))),
+    codingConsistency: Math.max(0, Math.min(100, toNumber(data.codingConsistency, fallback.codingConsistency))),
+    repositoryQuality: Math.max(0, Math.min(100, toNumber(data.repositoryQuality, fallback.repositoryQuality))),
+    commitFrequency: Math.max(0, Math.min(100, toNumber(data.commitFrequency, fallback.commitFrequency))),
+    topRepository: data.topRepository || fallback.topRepository,
+    openSourceContributions: Number(data.openSourceContributions || fallback.openSourceContributions),
+    aiCandidateSummary: data.aiCandidateSummary || fallback.aiCandidateSummary
   };
 };
 
@@ -382,7 +417,15 @@ exports.generateInterviewQuestions = async (role, skills, count = 10, userId = n
     summary: 'Fallback interview question output.'
   };
 
-  const data = await callGemini(prompts.interviewQuestionsPrompt, { role, skills, count }, fallback, userId, options);
+  const GitHubRepository = require('../models/GitHubRepository');
+  const repos = userId ? await GitHubRepository.find({ user: userId }).limit(10) : [];
+  const repoDetails = repos.map(r => ({
+    name: r.name,
+    languages: r.languages,
+    topics: r.topics
+  }));
+
+  const data = await callGemini(prompts.interviewQuestionsPrompt, { role, skills, count, repoDetails }, fallback, userId, options);
   return {
     ...data,
     module: 'interview-questions',
@@ -553,7 +596,11 @@ exports.generateCareerRoadmap = async (profile, userId = null, options = {}) => 
     summary: 'Fallback career roadmap output.'
   };
 
-  const data = await callGemini(prompts.careerRoadmapPrompt, { profile }, fallback, userId, options);
+  const GitHubRepository = require('../models/GitHubRepository');
+  const repos = userId ? await GitHubRepository.find({ user: userId }).limit(10) : [];
+  const repoSummary = repos.map(r => `${r.name} (${r.language || 'Unknown'}): ${r.description || ''}`).join('\n');
+
+  const data = await callGemini(prompts.careerRoadmapPrompt, { profile, repoSummary }, fallback, userId, options);
   return {
     ...data,
     module: 'career-roadmap',

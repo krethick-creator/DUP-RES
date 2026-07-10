@@ -20,6 +20,14 @@ const githubProfileSchema = new mongoose.Schema({
   languages: [{ name: String, percentage: Number }],
   portfolioScore: { type: Number, default: 0 },
   contributionAnalysis: { type: mongoose.Schema.Types.Mixed, default: {} },
+  contributionScore: { type: Number, default: 0 },
+  projectComplexity: { type: Number, default: 0 },
+  codingConsistency: { type: Number, default: 0 },
+  repositoryQuality: { type: Number, default: 0 },
+  commitFrequency: { type: Number, default: 0 },
+  topRepository: { type: String, default: '' },
+  openSourceContributions: { type: Number, default: 0 },
+  aiCandidateSummary: { type: String, default: '' },
   lastSynced: Date
 }, { timestamps: true });
 

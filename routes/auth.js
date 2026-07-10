@@ -28,4 +28,7 @@ router.get('/notifications', protect, auth.getNotifications);
 router.put('/notifications/:id/read', protect, auth.markNotificationRead);
 router.get('/search', protect, auth.globalSearch);
 
+router.get('/github', auth.githubAuth);
+router.get('/github/callback', auth.githubCallback);
+
 module.exports = router;

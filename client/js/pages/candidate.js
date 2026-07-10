@@ -431,25 +431,8 @@ const CandidateDashboard = {
     });
 
     // GitHub connect
-    document.getElementById('connect-github')?.addEventListener('click', async (e) => {
-      const username = prompt('Enter your GitHub username:', 'alexchen-dev');
-      if (!username) return;
-      e.target.disabled = true;
-      const originalText = e.target.textContent;
-      e.target.textContent = 'Connecting...';
-      try {
-        await API.connectGitHub(username);
-        UI.toast('GitHub connected and analyzed!', 'success');
-        await this.loadGitHub();
-      } catch (err) {
-        const msg = err.status === 429 || err.message.includes('429')
-          ? "AI is temporarily busy. Please wait a few seconds and try again."
-          : err.message;
-        UI.toast(msg, 'error');
-      } finally {
-        e.target.disabled = false;
-        e.target.textContent = originalText;
-      }
+    document.getElementById('connect-github')?.addEventListener('click', () => {
+      window.location.href = `/api/auth/github?token=${API.token}`;
     });
   },
 

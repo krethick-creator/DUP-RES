@@ -156,3 +156,90 @@ exports.globalSearch = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+exports.githubAuth = (req, res) => {
+  const { token } = req.query;
+  const config = require('../config');
+  const clientId = config.github.clientId;
+  const redirectUri = `${req.protocol}://${req.get('host')}/api/auth/github/callback`;
+  const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(token)}&scope=user,repo`;
+  res.redirect(githubUrl);
+};
+
+exports.githubCallback = async (req, res) => {
+  const { code, state } = req.query;
+  const config = require('../config');
+  const clientId = config.github.clientId;
+  const clientSecret = config.github.clientSecret;
+  const redirectUri = `${req.protocol}://${req.get('host')}/api/auth/github/callback`;
+
+  try {
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(state, config.jwt.secret);
+    const user = await User.findById(decoded.id);
+    if (!user) return res.status(404).send('User not found');
+
+    const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        redirect_uri: redirectUri
+      })
+    });
+   const tokenData = await tokenRes.json();
+
+console.log("GitHub Token Response:");
+console.log(tokenData);
+
+const accessToken = tokenData.access_token;
+
+if (!accessToken) {
+    return res.status(400).json(tokenData);
+}
+
+    const profileRes = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'User-Agent': 'ai-recruitment-platform'
+      }
+    });
+    const profileData = await profileRes.json();
+
+    let email = profileData.email || '';
+    if (!email) {
+      const emailRes = await fetch('https://api.github.com/user/emails', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'User-Agent': 'ai-recruitment-platform'
+        }
+      });
+      const emails = await emailRes.json();
+      if (Array.isArray(emails)) {
+        const primary = emails.find(e => e.primary) || emails[0];
+        email = primary?.email || '';
+      }
+    }
+
+    user.githubId = String(profileData.id);
+    user.githubUsername = profileData.login;
+    user.githubName = profileData.name || profileData.login;
+    user.githubEmail = email;
+    user.githubAvatar = profileData.avatar_url;
+    user.githubAccessToken = accessToken;
+    user.githubProfileUrl = profileData.html_url;
+    user.githubConnected = true;
+    await user.save();
+
+    const roleRoutes = { candidate: 'candidate', recruiter: 'recruiter' };
+    res.redirect(`${config.clientUrl}/#/${roleRoutes[user.role] || 'candidate'}/github`);
+  } catch (error) {
+    console.error('GitHub OAuth error:', error);
+    res.status(500).send('Authentication failed');
+  }
+};

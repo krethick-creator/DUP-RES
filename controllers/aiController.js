@@ -3,20 +3,50 @@ const GitHubProfile = require('../models/GitHubProfile');
 const CareerRoadmap = require('../models/CareerRoadmap');
 const Assessment = require('../models/Assessment');
 const AICache = require('../models/AICache');
+const GitHubRepository = require('../models/GitHubRepository');
+const githubService = require('../services/githubService');
 
 exports.githubConnect = async (req, res) => {
   try {
     const { username } = req.body;
-    const analysis = await aiService.analyzeGitHub(username, req.user._id, { forceRegenerate: true });
+    if (!username) {
+      const profile = await GitHubProfile.findOne({ user: req.user._id });
+      return res.json({ success: true, profile });
+    }
+
+    const synced = await githubService.syncUserGitHubData(req.user._id, username);
+    const analysis = await aiService.analyzeGitHub(synced.repos, { githubUsername: username }, req.user._id, { forceRegenerate: true });
+
     const profile = await GitHubProfile.findOneAndUpdate(
       { user: req.user._id },
-      { user: req.user._id, username, ...analysis, lastSynced: new Date() },
+      {
+        user: req.user._id,
+        username,
+        repos: analysis.repos || [],
+        totalCommits: synced.totalCommits || analysis.totalCommits || 0,
+        totalPRs: synced.totalPRs || analysis.totalPRs || 0,
+        languages: synced.languages || analysis.languages || [],
+        portfolioScore: analysis.portfolioScore || 70,
+        contributionScore: analysis.contributionScore || 70,
+        projectComplexity: analysis.projectComplexity || 70,
+        codingConsistency: analysis.codingConsistency || 70,
+        repositoryQuality: analysis.repositoryQuality || 70,
+        commitFrequency: analysis.commitFrequency || 70,
+        topRepository: analysis.topRepository || '',
+        openSourceContributions: analysis.openSourceContributions || 0,
+        aiCandidateSummary: analysis.aiCandidateSummary || '',
+        lastSynced: new Date()
+      },
       { upsert: true, new: true }
     );
-    req.user.githubUsername = username;
-    req.user.githubConnected = true;
-    await req.user.save();
-    res.json({ success: true, profile });
+
+    if (req.user.role === 'candidate') {
+      req.user.githubUsername = username;
+      req.user.githubConnected = true;
+      await req.user.save();
+    }
+
+    res.json({ success: true, profile, repositories: synced.repos });
   } catch (error) {
     if (error.status === 429) return res.status(429).json({ success: false, message: error.message });
     res.status(500).json({ success: false, message: error.message });
@@ -26,7 +56,8 @@ exports.githubConnect = async (req, res) => {
 exports.getGitHubProfile = async (req, res) => {
   try {
     const profile = await GitHubProfile.findOne({ user: req.user._id });
-    res.json({ success: true, profile });
+    const repositories = await GitHubRepository.find({ user: req.user._id });
+    res.json({ success: true, profile, repositories });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -34,12 +65,37 @@ exports.getGitHubProfile = async (req, res) => {
 
 exports.syncGitHub = async (req, res) => {
   try {
-    const profile = await GitHubProfile.findOne({ user: req.user._id });
-    if (!profile) return res.status(404).json({ success: false, message: 'GitHub not connected' });
-    const analysis = await aiService.analyzeGitHub(profile.username, req.user._id, { forceRegenerate: true });
-    Object.assign(profile, analysis, { lastSynced: new Date() });
-    await profile.save();
-    res.json({ success: true, profile });
+    const userId = req.user._id;
+    const synced = await githubService.syncUserGitHubData(userId);
+    const analysis = await aiService.analyzeGitHub(synced.repos, req.user, userId, { forceRegenerate: true });
+
+    const profile = await GitHubProfile.findOneAndUpdate(
+      { user: userId },
+      {
+        user: userId,
+        username: req.user.githubUsername,
+        repos: analysis.repos || [],
+        totalCommits: synced.totalCommits || analysis.totalCommits || 0,
+        totalPRs: synced.totalPRs || analysis.totalPRs || 0,
+        languages: synced.languages || analysis.languages || [],
+        portfolioScore: analysis.portfolioScore || 70,
+        contributionScore: analysis.contributionScore || 70,
+        projectComplexity: analysis.projectComplexity || 70,
+        codingConsistency: analysis.codingConsistency || 70,
+        repositoryQuality: analysis.repositoryQuality || 70,
+        commitFrequency: analysis.commitFrequency || 70,
+        topRepository: analysis.topRepository || '',
+        openSourceContributions: analysis.openSourceContributions || 0,
+        aiCandidateSummary: analysis.aiCandidateSummary || '',
+        lastSynced: new Date()
+      },
+      { upsert: true, new: true }
+    );
+
+    req.user.githubConnected = true;
+    await req.user.save();
+
+    res.json({ success: true, profile, repositories: synced.repos });
   } catch (error) {
     if (error.status === 429) return res.status(429).json({ success: false, message: error.message });
     res.status(500).json({ success: false, message: error.message });

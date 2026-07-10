@@ -28,9 +28,9 @@ module.exports = {
         `Return JSON: factors (array of factor, weight, score), summary (string), confidence (0-1).\nScore:${score}\nContext:${JSON.stringify(context || {})}`
     ),
 
-    dynamicResumePrompt: ({ resume, job }) => baseInstruction(
-        'Tailor candidate resume to a target role.',
-        `Return JSON: tailoredSummary (string), highlightedSkills (array), suggestedChanges (array), summary (string).\nResume:${JSON.stringify(resume || {})}\nTarget job:${JSON.stringify(job || {})}`
+    dynamicResumePrompt: ({ resume, job, repos }) => baseInstruction(
+        'Tailor candidate resume and map their GitHub projects to the target role.',
+        `Return JSON: tailoredSummary (string), highlightedSkills (array), suggestedChanges (array), resumeProjectSection (array of objects with title, description, technologiesUsed (array), keyContributions, impactStatement, bulletPoints (array)), summary (string).\nResume:${JSON.stringify(resume || {})}\nTarget job:${JSON.stringify(job || {})}\nGitHub Repos:${JSON.stringify(repos || [])}`
     ),
 
     resumeSimulationPrompt: ({ resume, scenarios }) => baseInstruction(
@@ -53,9 +53,9 @@ module.exports = {
         `Return JSON: overallGrade (string), improvements (array of area, suggestion, priority), estimatedScoreIncrease (number), summary (string).\nResume:${JSON.stringify(resume || {})}`
     ),
 
-    githubAnalysisPrompt: ({ username }) => baseInstruction(
-        'Review a GitHub profile and summarize contribution quality and language percentages.',
-        `Return JSON: portfolioScore (0-100), totalCommits (number), totalPRs (number), languages (array of name and percentage), contributionAnalysis (consistency, impact, collaboration), repos (array of name, rank, qualityScore, summary, architecture).\nGitHub username:${username || 'unknown'}`
+    githubAnalysisPrompt: ({ username, repos }) => baseInstruction(
+        'Analyze the user\'s real GitHub repositories and contributions to evaluate coding skills.',
+        `Return JSON: portfolioScore (0-100), totalCommits (number), totalPRs (number), languages (array of name and percentage), contributionScore (0-100), projectComplexity (0-100), codingConsistency (0-100), repositoryQuality (0-100), commitFrequency (0-100), topRepository (string), openSourceContributions (number), aiCandidateSummary (string), repos (array of name, rank, qualityScore, summary, architecture).\nGitHub username:${username || 'unknown'}\nRepos:${JSON.stringify(repos || [])}`
     ),
 
     projectKnowledgePrompt: ({ projectName, question }) => baseInstruction(
@@ -78,9 +78,9 @@ module.exports = {
         `Return JSON: score (0-100), issues (array of line, severity, message), suggestions (array), securityIssues (array), summary (string).\nLanguage:${language || 'JavaScript'}\nCode:${String(code || '').slice(0, 5000)}`
     ),
 
-    interviewQuestionsPrompt: ({ role, skills, count }) => baseInstruction(
-        'Create interview questions tailored to a role and skill set.',
-        `Return JSON: questions (array of id, question, type, difficulty), summary (string).\nRole:${role || 'Engineer'}\nSkills:${JSON.stringify(skills || [])}\nCount:${count || 10}`
+    interviewQuestionsPrompt: ({ role, skills, count, repoDetails }) => baseInstruction(
+        'Create interview questions tailored to a role, skill set, and their real GitHub projects.',
+        `Return JSON: questions (array of id, question, type, difficulty), summary (string).\nRole:${role || 'Engineer'}\nSkills:${JSON.stringify(skills || [])}\nCount:${count || 10}\nGitHub Repos Details:${JSON.stringify(repoDetails || [])}`
     ),
 
     softSkillsPrompt: ({ profile }) => baseInstruction(
@@ -118,9 +118,9 @@ module.exports = {
         `Return JSON: gapScore (0-100), missingSkills (array), recommendedLearning (array), summary (string).\nCandidate skills:${JSON.stringify(candidateSkills || [])}\nTarget skills:${JSON.stringify(targetSkills || [])}`
     ),
 
-    careerRoadmapPrompt: ({ profile }) => baseInstruction(
+    careerRoadmapPrompt: ({ profile, repoSummary }) => baseInstruction(
         'Build a realistic career roadmap for a candidate.',
-        `Return JSON: nodes (array of id, type, label, progress, x, y), connections (array of from, to), progress (0-100), summary (string).\nProfile:${JSON.stringify(profile || {})}`
+        `Return JSON: nodes (array of id, type, label, progress, x, y), connections (array of from, to), progress (0-100), summary (string).\nProfile:${JSON.stringify(profile || {})}\nGitHub Repositories:\n${repoSummary || 'None'}`
     ),
 
     roadmapAnalysisPrompt: ({ roadmap }) => baseInstruction(
