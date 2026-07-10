@@ -47,6 +47,12 @@
   --glass-border: rgba(51, 65, 85, 0.5);
 }
 
+/* Dynamic PNG Icon Support for Dark Mode */
+[data-theme="dark"] img[src*="/candidate/"],
+[data-theme="dark"] img[src*="/recruiter/"] {
+  filter: brightness(0) invert(1);
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html { scroll-behavior: smooth; font-size: 16px; }

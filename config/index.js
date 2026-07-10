@@ -1,5 +1,17 @@
 require('dotenv').config();
 
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+if (!googleClientId) {
+  console.error('✗ Missing GOOGLE_CLIENT_ID');
+}
+if (!googleClientSecret) {
+  console.error('✗ Missing GOOGLE_CLIENT_SECRET');
+}
+if (googleClientId && googleClientSecret) {
+  console.log('✓ Google OAuth configured');
+}
+
 module.exports = {
   port: process.env.PORT || 5000,
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -19,7 +31,13 @@ module.exports = {
   },
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || ''
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/auth/google/callback'
+  },
+  linkedin: {
+    clientId: process.env.LINKEDIN_CLIENT_ID || '',
+    clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
+    redirectUri: process.env.LINKEDIN_REDIRECT_URI || 'http://localhost:5000/api/auth/linkedin/callback'
   },
   gmail: {
     clientId: process.env.GMAIL_CLIENT_ID || '',

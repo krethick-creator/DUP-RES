@@ -3,6 +3,10 @@ const mongoose = require('mongoose');
 const githubProfileSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
   username: { type: String, required: true },
+  avatarUrl: { type: String, default: '' },
+  followers: { type: Number, default: 0 },
+  following: { type: Number, default: 0 },
+  publicRepos: { type: Number, default: 0 },
   repos: [{
     name: String,
     description: String,
@@ -28,6 +32,12 @@ const githubProfileSchema = new mongoose.Schema({
   topRepository: { type: String, default: '' },
   openSourceContributions: { type: Number, default: 0 },
   aiCandidateSummary: { type: String, default: '' },
+  aiSkillDetection: { type: mongoose.Schema.Types.Mixed, default: {} },
+  aiResumeProjectDescriptions: [{ type: mongoose.Schema.Types.Mixed }],
+  aiTechStackAnalysis: { type: mongoose.Schema.Types.Mixed, default: {} },
+  aiCandidateStrengths: [{ type: String }],
+  aiCandidateWeaknesses: [{ type: String }],
+  aiInterviewQuestions: [{ type: mongoose.Schema.Types.Mixed }],
   lastSynced: Date
 }, { timestamps: true });
 

@@ -3,6 +3,57 @@
  */
 
 const UI = {
+  emojiMap: {
+    candidate: {
+      '📊': '/candidate/overview.png',
+      '👤': '/candidate/profile.png',
+      '📄': '/candidate/resume.png',
+      '📋': '/candidate/applications.png',
+      '🤖': '/candidate/resume ai.png',
+      '💻': '/candidate/coding assesment.png',
+      '🎤': '/candidate/interview prep.png',
+      '✨': '/candidate/ai assistent.png',
+      '🗺️': '/candidate/career roadmap.png',
+      '📚': '/candidate/learning progress.png',
+      '🏆': '/candidate/leaderboard.png',
+      '📈': '/candidate/bechmarks.png',
+      '🚀': '/candidate/growth prediction.png',
+      '🐙': '/candidate/github.png',
+      '💼': '/candidate/job recommendations.png',
+      '🔔': '/candidate/notification.png',
+      '⚙️': '/candidate/settings.png',
+      '🎯': '/candidate/resume ai.png',
+      '📥': '/candidate/resume.png',
+      '📧': '/candidate/profile.png',
+      '🔗': '/candidate/profile.png'
+    },
+    recruiter: {
+      '📊': '/recruiter/overview.png',
+      '💼': '/recruiter/manage jobs.png',
+      '✨': '/recruiter/ai job creation.png',
+      '👥': '/recruiter/candidate.png',
+      '🔍': '/recruiter/resume screening.png',
+      '🏅': '/recruiter/candidate ranking.png',
+      '🤖': '/recruiter/recruiter assistent.png',
+      '📅': '/recruiter/interview scheduling.png',
+      '📈': '/recruiter/hiring analytics.png',
+      '🐙': '/recruiter/git analysis.png',
+      '📑': '/recruiter/report.png',
+      '⭐': '/recruiter/shortlist.png',
+      '🔔': '/recruiter/notification.png',
+      '⚙️': '/recruiter/settings.png',
+      '📧': '/recruiter/recruiter assistent.png'
+    }
+  },
+
+  getIcon(emoji, type = 'candidate', size = '22px') {
+    const path = this.emojiMap[type]?.[emoji];
+    if (path) {
+      return `<img src="${path}" style="width:${size}; height:${size}; object-fit:contain; vertical-align:middle; display:inline-block;" loading="lazy">`;
+    }
+    return emoji;
+  },
+
   toast(message, type = 'info') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -54,9 +105,11 @@ const UI = {
   },
 
   emptyState(icon, title, desc, action = '') {
+    const isRecruiter = window.location.hash.startsWith('#/recruiter');
+    const role = isRecruiter ? 'recruiter' : 'candidate';
     return `
       <div class="empty-state">
-        <div class="icon">${icon}</div>
+        <div class="icon">${this.getIcon(icon, role, '48px')}</div>
         <h3>${title}</h3>
         <p class="text-secondary mt-2">${desc}</p>
         ${action ? `<div class="mt-4">${action}</div>` : ''}
@@ -92,7 +145,7 @@ const UI = {
   uploadZone(id = 'file-upload') {
     return `
       <div class="upload-zone" id="${id}">
-        <div class="icon">📄</div>
+        <div class="icon">${this.getIcon('📄', 'candidate', '48px')}</div>
         <p><strong>Drop your resume here</strong> or click to browse</p>
         <p class="text-sm text-muted mt-2">PDF, DOC, DOCX up to 10MB</p>
         <input type="file" accept=".pdf,.doc,.docx" hidden>
@@ -164,13 +217,15 @@ const UI = {
   },
 
   sidebarNav(sections, activeSection) {
+    const isRecruiter = window.location.hash.startsWith('#/recruiter');
+    const role = isRecruiter ? 'recruiter' : 'candidate';
     return sections.map(sec => `
       <div class="nav-section">
         <div class="nav-section-title">${sec.title}</div>
         ${sec.items.map(item => `
           <button class="nav-item ${activeSection === item.id ? 'active' : ''}" data-section="${item.id}">
-            <span class="icon">${item.icon}</span>
-            <span>${item.label}</span>
+            <span class="icon" style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px;">${this.getIcon(item.icon, role, '22px')}</span>
+            <span style="margin-left: 8px;">${item.label}</span>
           </button>
         `).join('')}
       </div>

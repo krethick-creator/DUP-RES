@@ -40,6 +40,12 @@ const CandidateDashboard = {
 
   async render(section = 'overview') {
     this.section = section;
+    try {
+      const data = await API.getMe();
+      if (data && data.user) {
+        API.setUser(data.user);
+      }
+    } catch (_) {}
     this.user = API.getUser();
     const sidebar = `
       <div class="sidebar-header">
@@ -115,20 +121,81 @@ const CandidateDashboard = {
   },
 
   renderProfile() {
+    const ghConnected = this.user?.githubConnected;
+    const liConnected = this.user?.linkedinConnected;
+    const googleConnected = this.user?.googleConnected;
+
     return `
       <div class="page-header"><h2>Profile</h2><p class="text-secondary">Manage your personal information</p></div>
-      <div class="card">
-        <form id="profile-form">
-          <div class="grid grid-2 gap-4">
-            <div class="form-group"><label class="form-label">Name</label><input class="form-input" name="name" value="${this.user?.name || ''}"></div>
-            <div class="form-group"><label class="form-label">Email</label><input class="form-input" value="${this.user?.email || ''}" disabled></div>
-            <div class="form-group"><label class="form-label">Phone</label><input class="form-input" name="phone" placeholder="+1-555-0100"></div>
-            <div class="form-group"><label class="form-label">Location</label><input class="form-input" name="location" placeholder="City, Country"></div>
+      <div class="grid grid-2 gap-6">
+        <div class="card">
+          <form id="profile-form">
+            <div class="grid grid-2 gap-4">
+              <div class="form-group"><label class="form-label">Name</label><input class="form-input" name="name" value="${this.user?.name || ''}"></div>
+              <div class="form-group"><label class="form-label">Email</label><input class="form-input" value="${this.user?.email || ''}" disabled></div>
+              <div class="form-group"><label class="form-label">Phone</label><input class="form-input" name="phone" placeholder="+1-555-0100" value="${this.user?.phone || ''}"></div>
+              <div class="form-group"><label class="form-label">Location</label><input class="form-input" name="location" placeholder="City, Country" value="${this.user?.location || ''}"></div>
+            </div>
+            <div class="form-group"><label class="form-label">Bio</label><textarea class="form-textarea" name="bio" placeholder="Tell us about yourself">${this.user?.bio || ''}</textarea></div>
+            <div class="form-group"><label class="form-label">Skills (comma separated)</label><input class="form-input" name="skills" placeholder="JavaScript, React, Node.js" value="${this.user?.skills?.join(', ') || ''}"></div>
+            <button type="submit" class="btn btn-primary">Save Profile</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h3 class="mb-4">Connected Accounts</h3>
+          <div class="flex flex-col gap-4">
+            
+            <!-- GitHub Account -->
+            <div class="flex justify-between items-center p-3 rounded" style="background:var(--bg-secondary); border: 1px solid var(--border-color)">
+              <div class="flex items-center gap-3">
+                ${UI.getIcon('🐙', 'candidate', '28px')}
+                <div>
+                  <strong>GitHub</strong>
+                  <div class="text-sm text-secondary">${ghConnected ? 'Connected' : 'Not Connected'}</div>
+                </div>
+              </div>
+              <div>
+                ${ghConnected ? `
+                  <button class="btn btn-secondary btn-sm" id="disconnect-github-btn">Disconnect</button>
+                ` : `
+                  <button class="btn btn-primary btn-sm" id="connect-github-btn">Connect</button>
+                `}
+              </div>
+            </div>
+
+            <!-- LinkedIn Account -->
+            <div class="flex justify-between items-center p-3 rounded" style="background:var(--bg-secondary); border: 1px solid var(--border-color)">
+              <div class="flex items-center gap-3">
+                ${UI.getIcon('💼', 'candidate', '28px')}
+                <div>
+                  <strong>LinkedIn</strong>
+                  <div class="text-sm text-secondary">${liConnected ? 'Connected' : 'Not Connected'}</div>
+                </div>
+              </div>
+              <div>
+                ${liConnected ? `
+                  <button class="btn btn-secondary btn-sm" id="disconnect-linkedin-btn">Disconnect</button>
+                ` : `
+                  <button class="btn btn-primary btn-sm" id="connect-linkedin-btn">Connect LinkedIn</button>
+                `}
+              </div>
+            </div>
+
+            <!-- Candidate Email Status -->
+            <div class="flex justify-between items-center p-3 rounded" style="background:var(--bg-secondary); border: 1px solid var(--border-color)">
+              <div class="flex items-center gap-3">
+                ${UI.getIcon('📧', 'candidate', '28px')}
+                <div>
+                  <strong>Email Address</strong>
+                  <div class="text-sm text-secondary">${this.user?.email || ''}</div>
+                  <div class="text-xs text-muted">${this.user?.emailVerified || this.user?.isVerified ? '✅ Email Verified' : '❌ Email Not Verified'}</div>
+                </div>
+              </div>
+            </div>
+
           </div>
-          <div class="form-group"><label class="form-label">Bio</label><textarea class="form-textarea" name="bio" placeholder="Tell us about yourself"></textarea></div>
-          <div class="form-group"><label class="form-label">Skills (comma separated)</label><input class="form-input" name="skills" placeholder="JavaScript, React, Node.js"></div>
-          <button type="submit" class="btn btn-primary">Save Profile</button>
-        </form>
+        </div>
       </div>`;
   },
 
@@ -165,9 +232,9 @@ const CandidateDashboard = {
     return `
       <div class="page-header"><h2>Resume AI</h2><p class="text-secondary">AI-powered resume tools</p></div>
       <div class="grid grid-3 gap-4 mb-6">
-        <button class="card hover-lift text-center" data-ai-action="simulate"><div style="font-size:2rem">🎯</div><h4 class="mt-2">Resume Simulation</h4><p class="text-sm text-muted">Test against hiring scenarios</p></button>
-        <button class="card hover-lift text-center" data-ai-action="dynamic"><div style="font-size:2rem">✨</div><h4 class="mt-2">Dynamic Resume</h4><p class="text-sm text-muted">Tailor for specific jobs</p></button>
-        <button class="card hover-lift text-center" data-ai-action="improve"><div style="font-size:2rem">📈</div><h4 class="mt-2">Improvement Report</h4><p class="text-sm text-muted">Get actionable feedback</p></button>
+        <button class="card hover-lift text-center" data-ai-action="simulate"><div style="display:flex; justify-content:center; align-items:center; height:32px; margin-bottom:8px;">${UI.getIcon('🎯', 'candidate', '28px')}</div><h4 class="mt-2">Resume Simulation</h4><p class="text-sm text-muted">Test against hiring scenarios</p></button>
+        <button class="card hover-lift text-center" data-ai-action="dynamic"><div style="display:flex; justify-content:center; align-items:center; height:32px; margin-bottom:8px;">${UI.getIcon('✨', 'candidate', '28px')}</div><h4 class="mt-2">Dynamic Resume</h4><p class="text-sm text-muted">Tailor for specific jobs</p></button>
+        <button class="card hover-lift text-center" data-ai-action="improve"><div style="display:flex; justify-content:center; align-items:center; height:32px; margin-bottom:8px;">${UI.getIcon('📈', 'candidate', '28px')}</div><h4 class="mt-2">Improvement Report</h4><p class="text-sm text-muted">Get actionable feedback</p></button>
       </div>
       <div class="card" id="resume-ai-result"><p class="text-secondary">Select an action above to run AI analysis</p></div>`;
   },
@@ -270,10 +337,11 @@ const CandidateDashboard = {
         <button class="btn btn-primary" id="connect-github">Connect GitHub</button>
       </div>
       <div class="grid grid-4 gap-4 mb-6" id="github-stats"></div>
-      <div class="grid grid-2 gap-6">
+      <div class="grid grid-2 gap-6 mb-6">
         <div class="card chart-container"><h3 class="mb-4">Languages</h3><div class="chart-wrapper"><canvas id="github-lang-chart"></canvas></div></div>
         <div class="card" id="github-repos"><h3 class="mb-4">Top Repositories</h3><div class="spinner"></div></div>
-      </div>`;
+      </div>
+      <div id="github-ai-insights"></div>`;
   },
 
   async renderJobs() {
@@ -433,6 +501,59 @@ const CandidateDashboard = {
     // GitHub connect
     document.getElementById('connect-github')?.addEventListener('click', () => {
       window.location.href = `/api/auth/github?token=${API.token}`;
+    });
+
+    // Profile Connected Accounts bindings
+    document.getElementById('connect-github-btn')?.addEventListener('click', () => {
+      window.location.href = `/api/auth/github?token=${API.token}`;
+    });
+
+    document.getElementById('disconnect-github-btn')?.addEventListener('click', async () => {
+      try {
+        await API.post('/auth/github/disconnect');
+        UI.toast('GitHub account disconnected', 'success');
+        const data = await API.getMe();
+        if (data && data.user) API.setUser(data.user);
+        await this.render('profile');
+      } catch (err) { UI.toast(err.message, 'error'); }
+    });
+
+    document.getElementById('connect-linkedin-btn')?.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/auth/linkedin');
+        const text = await res.text();
+        if (text.includes('not configured')) {
+          UI.toast('LinkedIn OAuth is not configured.', 'warning');
+        } else {
+          window.location.href = `/api/auth/linkedin?token=${API.token}`;
+        }
+      } catch (err) {
+        UI.toast('LinkedIn OAuth is not configured.', 'warning');
+      }
+    });
+
+    document.getElementById('disconnect-linkedin-btn')?.addEventListener('click', async () => {
+      try {
+        await API.post('/auth/linkedin/disconnect');
+        UI.toast('LinkedIn account disconnected', 'success');
+        const data = await API.getMe();
+        if (data && data.user) API.setUser(data.user);
+        await this.render('profile');
+      } catch (err) { UI.toast(err.message, 'error'); }
+    });
+
+    document.getElementById('connect-gmail-btn')?.addEventListener('click', () => {
+      window.location.href = `/api/auth/google?token=${API.token}`;
+    });
+
+    document.getElementById('disconnect-gmail-btn')?.addEventListener('click', async () => {
+      try {
+        await API.post('/auth/google/disconnect');
+        UI.toast('Gmail account disconnected', 'success');
+        const data = await API.getMe();
+        if (data && data.user) API.setUser(data.user);
+        await this.render('profile');
+      } catch (err) { UI.toast(err.message, 'error'); }
     });
   },
 
@@ -726,49 +847,163 @@ const CandidateDashboard = {
 
   async loadGitHub() {
     try {
-      const data = await API.getGitHubProfile();
-      const p = data.profile;
+      const [profileData, reposData, langsData, commitsData, prsData, issuesData] = await Promise.all([
+        API.getGithubProfile(),
+        API.getGithubRepositories(),
+        API.getGithubLanguages(),
+        API.getGithubCommits(),
+        API.getGithubPRs(),
+        API.getGithubIssues()
+      ]);
+
+      const p = profileData.profile;
+      const stats = profileData.stats;
+      const repos = reposData.repositories || [];
+      const languages = langsData.languages || [];
+      const commits = commitsData.commits || [];
+      const prs = prsData.pullrequests || [];
+
       if (!p) {
         document.getElementById('github-repos').innerHTML = `<p class="text-secondary">No GitHub account connected. Use the button above to connect.</p>`;
         return;
       }
-      document.getElementById('github-stats').innerHTML = `
-        ${UI.statCard('Portfolio Score', p.portfolioScore || 0)}
-        ${UI.statCard('Commits', p.totalCommits || 0)}
-        ${UI.statCard('Pull Requests', p.totalPRs || 0)}
-        ${UI.statCard('Repositories', p.repos?.length || 0)}`;
 
-      document.getElementById('github-repos').innerHTML = `<h3 class="mb-4">Top Repositories</h3>` +
-        (p.repos || []).map(r => `
-          <div class="leaderboard-item">
-            <div><strong>${r.name}</strong><div class="text-sm text-muted">${r.language} • ⭐ ${r.stars}</div></div>
-            <span class="badge badge-primary">#${r.rank}</span>
-            <span class="text-sm">${r.qualityScore}/100</span>
+      // Hide/Show connect button if connected
+      const connectBtn = document.getElementById('connect-github');
+      if (connectBtn) connectBtn.style.display = 'none';
+
+      // 1. Render profile summary header
+      const statsContainer = document.getElementById('github-stats');
+      if (statsContainer) {
+        statsContainer.innerHTML = `
+          <div class="card flex items-center gap-4" style="grid-column: span 4">
+            <img src="${p.avatarUrl || 'https://github.com/identicons/placeholder.png'}" style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--border-color);">
+            <div style="flex: 1">
+              <h3 style="margin: 0">@${p.username}</h3>
+              <p class="text-sm text-secondary" style="margin: 4px 0">${p.followers || 0} Followers • ${p.following || 0} Following • ${p.publicRepos || 0} Public Repos</p>
+              <p class="text-xs text-muted" style="margin: 0">Last Synced: ${stats?.lastSynced ? new Date(stats.lastSynced).toLocaleString() : (p.lastSynced ? new Date(p.lastSynced).toLocaleString() : 'Never')}</p>
+            </div>
+            <div class="flex gap-2">
+              <a href="https://github.com/${p.username}" target="_blank" class="btn btn-secondary btn-sm">GitHub Profile</a>
+              <button class="btn btn-primary btn-sm" id="sync-github-btn">Sync GitHub</button>
+            </div>
           </div>
-        `).join('') + `
-          <div style="text-align: right; margin-top: 15px;">
-            <button class="btn btn-secondary btn-sm" id="sync-github-btn">Sync Repositories</button>
-          </div>`;
-          
+          ${UI.statCard('Repository Count', repos.length)}
+          ${UI.statCard('Commit Count', stats?.totalCommits || commits.length)}
+          ${UI.statCard('Pull Request Count', stats?.totalPRs || prs.length)}
+          ${UI.statCard('Contribution Score', stats?.contributionScore || 70, 'AI Evaluated', true)}
+        `;
+      }
+
+      // Re-bind sync button
       document.getElementById('sync-github-btn')?.addEventListener('click', async (e) => {
         e.target.disabled = true;
-        e.target.textContent = 'Syncing...';
+        e.target.innerHTML = '<span class="spinner" style="width: 1rem; height: 1rem; display: inline-block; border: 2px solid var(--primary-color); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px;"></span>Syncing...';
         try {
-          await API.post('/ai/github/sync');
-          UI.toast('GitHub repositories synced!', 'success');
+          await API.syncGithub();
+          UI.toast('GitHub profile and repositories synced!', 'success');
           await this.loadGitHub();
         } catch (err) {
-          const msg = err.status === 429 || err.message.includes('429')
-            ? "AI is temporarily busy. Please wait a few seconds and try again."
-            : err.message;
-          UI.toast(msg, 'error');
+          UI.toast(err.message, 'error');
+        } finally {
+          e.target.disabled = false;
+          e.target.textContent = 'Sync GitHub';
         }
       });
 
-      if (p.languages) {
-        Charts.pie('github-lang-chart', p.languages.map(l => l.name), p.languages.map(l => l.percentage));
+      // 2. Render Top Projects
+      const reposContainer = document.getElementById('github-repos');
+      if (reposContainer) {
+        reposContainer.innerHTML = `<h3 class="mb-4">Top Repositories</h3>` +
+          repos.slice(0, 5).map((r, i) => `
+            <div class="leaderboard-item">
+              <div>
+                <strong>${r.name}</strong>
+                <p class="text-sm text-secondary">${r.description || 'No description provided.'}</p>
+              </div>
+              <span class="badge badge-primary">#${i + 1}</span>
+              <span class="text-sm font-medium">${r.stars || 0} stars</span>
+            </div>
+          `).join('') || '<p class="text-secondary">No repositories found.</p>';
       }
-    } catch (_) { }
+
+      // 3. Render Top Languages Chart
+      if (languages && languages.length) {
+        Charts.pie('github-lang-chart', languages.map(l => l.name), languages.map(l => l.percentage));
+      }
+
+      // 4. Render AI Insights
+      const aiInsightsContainer = document.getElementById('github-ai-insights');
+      if (aiInsightsContainer) {
+        const strengthsList = p.aiCandidateStrengths && p.aiCandidateStrengths.length 
+          ? p.aiCandidateStrengths.map(s => `<li>• ${s}</li>`).join('') 
+          : '<li>No strengths detected yet.</li>';
+        const weaknessesList = p.aiCandidateWeaknesses && p.aiCandidateWeaknesses.length 
+          ? p.aiCandidateWeaknesses.map(w => `<li>• ${w}</li>`).join('') 
+          : '<li>No weaknesses detected yet.</li>';
+          
+        const skillsObj = p.aiSkillDetection || {};
+        const skillCategories = Object.keys(skillsObj)
+          .filter(k => Array.isArray(skillsObj[k]) && skillsObj[k].length)
+          .map(k => `<div><strong>${k.charAt(0).toUpperCase() + k.slice(1)}:</strong> ${skillsObj[k].join(', ')}</div>`)
+          .join('') || '<div>No specific tech stack details detected yet.</div>';
+
+        const questionsList = p.aiInterviewQuestions && p.aiInterviewQuestions.length
+          ? p.aiInterviewQuestions.map(q => `<div class="mb-2"><strong>Q: ${q.question}</strong> <span class="badge badge-primary badge-sm">${q.difficulty || 'medium'}</span></div>`).join('')
+          : '<div>No interview prep questions generated yet.</div>';
+
+        const resumeProjects = p.aiResumeProjectDescriptions && p.aiResumeProjectDescriptions.length
+          ? p.aiResumeProjectDescriptions.map(rp => `
+              <div class="mb-4" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                <h4 style="margin: 0 0 4px 0">${rp.title}</h4>
+                <p class="text-sm text-secondary"><strong>Tech:</strong> ${rp.technologiesUsed?.join(', ') || ''}</p>
+                <p class="text-sm">${rp.description}</p>
+                <p class="text-xs text-muted"><strong>Key Contribution:</strong> ${rp.keyContributions || ''}</p>
+              </div>
+            `).join('')
+          : '<div>No optimized resume project descriptions available yet.</div>';
+
+        aiInsightsContainer.innerHTML = `
+          <div class="grid grid-2 gap-6 mb-6">
+            <div class="card">
+              <h3 class="mb-4">AI Candidate Summary</h3>
+              <p style="line-height: 1.6; margin: 0;">${p.aiCandidateSummary || 'No AI summary generated yet.'}</p>
+            </div>
+            <div class="card">
+              <h3 class="mb-4">Technology Stack & Skill Detection</h3>
+              <div class="flex flex-col gap-2">${skillCategories}</div>
+            </div>
+          </div>
+          
+          <div class="grid grid-2 gap-6 mb-6">
+            <div class="card">
+              <h3 class="mb-4">Candidate Profile Analysis</h3>
+              <div class="mb-4">
+                <strong style="color: var(--success-color)">Strengths:</strong>
+                <ul style="list-style: none; padding-left: 0; margin-top: 8px;">${strengthsList}</ul>
+              </div>
+              <div>
+                <strong style="color: var(--error-color)">Areas for Improvement:</strong>
+                <ul style="list-style: none; padding-left: 0; margin-top: 8px;">${weaknessesList}</ul>
+              </div>
+            </div>
+            <div class="card">
+              <h3 class="mb-4">Suggested Interview Questions</h3>
+              <div>${questionsList}</div>
+            </div>
+          </div>
+
+          <div class="card mb-6">
+            <h3 class="mb-4">Optimized Resume Project Descriptions</h3>
+            <div>${resumeProjects}</div>
+          </div>
+        `;
+      }
+
+    } catch (err) {
+      console.error(err);
+      document.getElementById('github-repos').innerHTML = `<p class="text-error">Failed to load GitHub data: ${err.message}</p>`;
+    }
   },
 
   async runResumeAI(action) {

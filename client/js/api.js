@@ -85,8 +85,16 @@ const API = {
   updateApplication: (id, data) => API.put(`/applications/${id}`, data),
 
   // AI
-  connectGitHub: (username) => API.post('/ai/github/connect', { username }),
-  getGitHubProfile: () => API.get('/ai/github/profile'),
+  connectGitHub: () => API.post('/ai/github/connect', {}),
+  getGitHubProfile: (candidateId = '') => API.get(`/ai/github/profile${candidateId ? '?candidateId=' + candidateId : ''}`),
+  getGitHubInsights: (candidateId = '') => API.get(`/ai/github/insights${candidateId ? '?candidateId=' + candidateId : ''}`),
+  getRepositoryAnalysis: (repoName, candidateId = '') => API.get(`/ai/github/analysis/repo/${repoName}${candidateId ? '?candidateId=' + candidateId : ''}`),
+  getCommitAnalysis: (candidateId = '') => API.get(`/ai/github/analysis/commits${candidateId ? '?candidateId=' + candidateId : ''}`),
+  getPRAnalysis: (candidateId = '') => API.get(`/ai/github/analysis/prs${candidateId ? '?candidateId=' + candidateId : ''}`),
+  getIssueAnalysis: (candidateId = '') => API.get(`/ai/github/analysis/issues${candidateId ? '?candidateId=' + candidateId : ''}`),
+  getGeneratedResume: (candidateId = '') => API.get(`/ai/github/analysis/resume${candidateId ? '?candidateId=' + candidateId : ''}`),
+  getDetectedSkills: (candidateId = '') => API.get(`/ai/github/analysis/skills${candidateId ? '?candidateId=' + candidateId : ''}`),
+  getCompanyMatch: (data, candidateId = '') => API.post(`/ai/github/analysis/match${candidateId ? '?candidateId=' + candidateId : ''}`, data),
   getRoadmap: () => API.get('/ai/roadmap'),
   updateRoadmap: (data) => API.put('/ai/roadmap', data),
   getLeaderboard: () => API.get('/ai/leaderboard'),
@@ -106,5 +114,14 @@ const API = {
   // Profile / General
   globalSearch: (q) => API.get(`/auth/search?q=${encodeURIComponent(q)}`),
   getNotifications: () => API.get('/auth/notifications'),
-  markNotificationRead: (id) => API.put(`/auth/notifications/${id}/read`)
+  markNotificationRead: (id) => API.put(`/auth/notifications/${id}/read`),
+
+  // GitHub REST Caching API
+  getGithubProfile: (candidateId = '') => API.get(`/github/profile${candidateId ? '?candidateId=' + candidateId : ''}`),
+  getGithubRepositories: (candidateId = '') => API.get(`/github/repositories${candidateId ? '?candidateId=' + candidateId : ''}`),
+  getGithubCommits: (candidateId = '') => API.get(`/github/commits${candidateId ? '?candidateId=' + candidateId : ''}`),
+  getGithubPRs: (candidateId = '') => API.get(`/github/pullrequests${candidateId ? '?candidateId=' + candidateId : ''}`),
+  getGithubIssues: (candidateId = '') => API.get(`/github/issues${candidateId ? '?candidateId=' + candidateId : ''}`),
+  getGithubLanguages: (candidateId = '') => API.get(`/github/languages${candidateId ? '?candidateId=' + candidateId : ''}`),
+  syncGithub: () => API.post('/github/sync', {})
 };

@@ -4,20 +4,51 @@ const prompts = require('./aiPrompts');
 const MODEL = 'gemini-2.5-flash';
 
 // Every AI capability uses the same Gemini client and a dedicated prompt so the experience stays modular.
-const callGemini = async (promptFactory, payload, fallback) => {
+const callGemini = async (promptFactory, payload, fallback, userId = null, options = {}) => {
+  const featureName = options.featureName || 'general-ai';
+  const force = options.forceRegenerate || false;
+  const AICache = require('../models/AICache');
+
+  if (userId && !force) {
+    try {
+      const cached = await AICache.findOne({ userId, featureName });
+      if (cached && cached.generatedData) {
+        return { ...fallback, ...cached.generatedData, configured: true, source: 'cache' };
+      }
+    } catch (cacheError) {
+      console.error('[aiService] Cache lookup error:', cacheError.message);
+    }
+  }
+
   try {
     if (process.env.AI_ENABLED !== "true") {
-    return {
-        success: false,
-        message: "AI is temporarily disabled."
-    };
-}
+      return {
+          success: false,
+          message: "AI is temporarily disabled."
+      };
+    }
     const prompt = typeof promptFactory === 'function' ? promptFactory(payload) : promptFactory;
     const result = await generateStructuredContent(prompt, { model: MODEL, temperature: 0.2, maxOutputTokens: 1200 });
+    let resolvedData = fallback;
     if (result && typeof result === 'object' && !Array.isArray(result)) {
-      return { ...fallback, ...result, configured: true, source: 'gemini' };
+      resolvedData = { ...fallback, ...result, configured: true, source: 'gemini' };
+    } else {
+      resolvedData = { ...fallback, configured: true, source: 'gemini' };
     }
-    return { ...fallback, configured: true, source: 'gemini' };
+
+    if (userId) {
+      try {
+        await AICache.findOneAndUpdate(
+          { userId, featureName },
+          { userId, featureName, generatedData: resolvedData, lastActualCallAt: new Date() },
+          { upsert: true, new: true }
+        );
+      } catch (cacheSaveError) {
+        console.error('[aiService] Cache save error:', cacheSaveError.message);
+      }
+    }
+
+    return resolvedData;
   } catch (error) {
     console.error('[aiService] Gemini error:', error.message);
     return { ...fallback, configured: false, source: 'fallback', error: error.message };
@@ -301,6 +332,7 @@ exports.analyzeGitHub = async (reposPayload, user, userId = null, options = {}) 
     topics: r.topics
   }));
 
+  options.featureName = 'github-analysis';
   const data = await callGemini(prompts.githubAnalysisPrompt, { username, repos }, fallback, userId, options);
   return {
     ...data,
@@ -926,6 +958,153 @@ exports.candidateAI = async (action, context, userId = null, options = {}) => {
   };
 };
 
+exports.analyzeRepository = async (repo, userId = null, options = {}) => {
+  const fallback = {
+    summary: 'A software repository containing code assets.',
+    techStack: [repo.language || 'JavaScript'],
+    frameworks: [],
+    architecture: 'Model-View-Controller / Single tier standard layout',
+    complexityScore: 65,
+    documentationScore: 70,
+    codeQualityScore: 75,
+    suggestions: ['Add systematic unit testing', 'Enhance API documentation'],
+    estimatedExperienceLevel: 'Mid-level'
+  };
+  options.featureName = `repository-analyzer:${repo.name}`;
+  const data = await callGemini(prompts.repositoryAnalysisPrompt, { repo }, fallback, userId, options);
+  return {
+    ...data,
+    module: 'repository-analyzer',
+    complexityScore: toNumber(data.complexityScore, fallback.complexityScore),
+    documentationScore: toNumber(data.documentationScore, fallback.documentationScore),
+    codeQualityScore: toNumber(data.codeQualityScore, fallback.codeQualityScore)
+  };
+};
+
+exports.analyzeCommits = async (commits, stats, userId = null, options = {}) => {
+  const fallback = {
+    commitFrequency: 'Steady activity',
+    codingConsistency: 80,
+    weeklyActivity: [5, 4, 3, 2, 6, 8, 1],
+    monthlyActivity: [20, 15, 25, 30],
+    developmentTimeline: 'Steady continuous progression over the active months',
+    longestCodingStreak: stats.longestStreak || 0,
+    contributionHeatmap: stats.heatmap || {}
+  };
+  options.featureName = 'commit-analyzer';
+  const data = await callGemini(prompts.commitAnalysisPrompt, { commits, stats }, fallback, userId, options);
+  return {
+    ...data,
+    module: 'commit-analyzer',
+    codingConsistency: toNumber(data.codingConsistency, fallback.codingConsistency),
+    longestCodingStreak: toNumber(data.longestCodingStreak, fallback.longestCodingStreak)
+  };
+};
+
+exports.analyzePullRequests = async (pulls, userId = null, options = {}) => {
+  const fallback = {
+    totalPRs: pulls.length,
+    mergedPRs: pulls.filter(p => p.state === 'closed' || p.mergedDate).length,
+    openPRs: pulls.filter(p => p.state === 'open').length,
+    reviewParticipation: 'Good peer cooperation and code quality checkpoints',
+    mergeSuccessRate: 85,
+    collaborationScore: 80
+  };
+  options.featureName = 'pull-request-analyzer';
+  const data = await callGemini(prompts.pullRequestAnalysisPrompt, { pulls }, fallback, userId, options);
+  return {
+    ...data,
+    module: 'pull-request-analyzer',
+    totalPRs: toNumber(data.totalPRs, fallback.totalPRs),
+    mergedPRs: toNumber(data.mergedPRs, fallback.mergedPRs),
+    openPRs: toNumber(data.openPRs, fallback.openPRs),
+    mergeSuccessRate: toNumber(data.mergeSuccessRate, fallback.mergeSuccessRate),
+    collaborationScore: toNumber(data.collaborationScore, fallback.collaborationScore)
+  };
+};
+
+exports.analyzeIssues = async (issues, userId = null, options = {}) => {
+  const fallback = {
+    openedIssues: issues.filter(i => i.state === 'open').length,
+    closedIssues: issues.filter(i => i.state === 'closed').length,
+    bugFixes: issues.filter(i => i.title.toLowerCase().includes('bug') || i.title.toLowerCase().includes('fix')).length,
+    featureRequests: issues.filter(i => i.title.toLowerCase().includes('feat') || i.title.toLowerCase().includes('request')).length,
+    maintenanceActivity: 'Regular maintenance and debugging operations'
+  };
+  options.featureName = 'issue-analyzer';
+  const data = await callGemini(prompts.issueAnalysisPrompt, { issues }, fallback, userId, options);
+  return {
+    ...data,
+    module: 'issue-analyzer',
+    openedIssues: toNumber(data.openedIssues, fallback.openedIssues),
+    closedIssues: toNumber(data.closedIssues, fallback.closedIssues),
+    bugFixes: toNumber(data.bugFixes, fallback.bugFixes),
+    featureRequests: toNumber(data.featureRequests, fallback.featureRequests)
+  };
+};
+
+exports.generateResumeFromGitHub = async (repos, languages, userId = null, options = {}) => {
+  const fallback = {
+    projects: (repos || []).slice(0, 3).map(r => ({
+      title: r.name,
+      description: r.description || 'Full stack repository project.',
+      technologiesUsed: [r.language].filter(Boolean),
+      keyContributions: 'Designed core features, constructed clean code architectures, and integrated components.',
+      achievements: 'Optimized operation speeds and introduced structural modular design patterns.',
+      bulletPoints: [
+        'Developed full stack architecture matching modern best practices.',
+        'Structured modular libraries utilizing clean dependencies.'
+      ],
+      atsKeywords: [r.language || 'JavaScript', 'Git', 'Software Development']
+    }))
+  };
+  options.featureName = 'resume-generator';
+  const data = await callGemini(prompts.resumeGenerationPrompt, { repos, languages }, fallback, userId, options);
+  return {
+    ...data,
+    module: 'resume-generator'
+  };
+};
+
+exports.detectSkills = async (repos, languages, userId = null, options = {}) => {
+  const fallback = {
+    languages: (languages || []).map(l => l.name),
+    frameworks: [],
+    libraries: [],
+    databases: ['MongoDB', 'PostgreSQL'],
+    cloud: ['AWS', 'GitHub Actions'],
+    devops: ['Docker', 'CI/CD'],
+    testing: ['Jest'],
+    tools: ['Git', 'VS Code'],
+    packageManagers: ['npm']
+  };
+  options.featureName = 'skill-detection';
+  const data = await callGemini(prompts.skillDetectionPrompt, { repos, languages }, fallback, userId, options);
+  return {
+    ...data,
+    module: 'skill-detection'
+  };
+};
+
+exports.companyMatching = async (profile, jobSkills, job, userId = null, options = {}) => {
+  const fallback = {
+    matchScore: 82,
+    matchesSkills: (profile.languages || []).map(l => l.name).filter(n => (jobSkills || []).includes(n)),
+    missingSkills: (jobSkills || []).filter(s => !(profile.languages || []).map(l => l.name).includes(s)),
+    matchesFrameworks: [],
+    contributionScore: profile.contributionScore || 75,
+    reasoning: 'Strong matches found across languages and primary developer practices.'
+  };
+  options.featureName = `company-matching:${job?._id || 'job'}`;
+  const data = await callGemini(prompts.companyMatchingPrompt, { profile, jobSkills, job }, fallback, userId, options);
+  return {
+    ...data,
+    module: 'company-matching',
+    matchScore: toNumber(data.matchScore, fallback.matchScore),
+    contributionScore: toNumber(data.contributionScore, fallback.contributionScore)
+  };
+};
+
 const buildAiCacheKey = (userId, featureName) => `${userId}:${featureName}`;
 
 const shouldUseAiCache = (state, cooldownMs = 30000) => {
@@ -946,3 +1125,4 @@ module.exports = {
   shouldUseAiCache,
   getCooldownMessage
 };
+

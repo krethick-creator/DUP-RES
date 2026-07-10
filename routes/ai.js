@@ -10,6 +10,14 @@ router.use(protect);
 router.post('/github/connect', ai.githubConnect);
 router.get('/github/profile', ai.getGitHubProfile);
 router.post('/github/sync', ai.syncGitHub);
+router.get('/github/insights', ai.getCandidateInsights);
+router.get('/github/analysis/repo/:repoName', ai.getRepositoryAnalysis);
+router.get('/github/analysis/commits', ai.getCommitAnalysis);
+router.get('/github/analysis/prs', ai.getPRAnalysis);
+router.get('/github/analysis/issues', ai.getIssueAnalysis);
+router.get('/github/analysis/resume', ai.getGeneratedResume);
+router.get('/github/analysis/skills', ai.getDetectedSkills);
+router.post('/github/analysis/match', ai.getCompanyMatch);
 
 // Career
 router.get('/roadmap', authorize('candidate'), ai.getRoadmap);

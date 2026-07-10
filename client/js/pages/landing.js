@@ -17,7 +17,7 @@ const LandingPage = {
       <section class="hero gradient-bg">
         <div class="container">
           <div class="hero-content animate-slide-up">
-            <div class="hero-badge">✨ AI-Powered Recruitment Platform</div>
+            <div class="hero-badge">${UI.getIcon('✨', 'candidate', '18px')} AI-Powered Recruitment Platform</div>
             <h1>Intelligent <span class="text-gradient">Talent Evaluation</span> for the Modern Era</h1>
             <p>Harness the power of AI to screen resumes, match skills semantically, rank candidates, and accelerate your hiring pipeline with explainable insights.</p>
             <div class="flex gap-4">
@@ -39,7 +39,7 @@ const LandingPage = {
             { icon: '🤖', title: 'AI Assistants', desc: 'Dedicated AI assistants for recruiters and candidates with contextual insights.' }
           ].map(f => `
             <div class="glass-card feature-card hover-lift">
-              <div class="feature-icon">${f.icon}</div>
+              <div class="feature-icon">${UI.getIcon(f.icon, 'candidate', '28px')}</div>
               <h3>${f.title}</h3>
               <p class="text-secondary mt-2">${f.desc}</p>
             </div>

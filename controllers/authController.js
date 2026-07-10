@@ -114,7 +114,7 @@ exports.verifyEmail = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const fields = ['name', 'phone', 'location', 'bio', 'skills', 'darkMode', 'githubUsername'];
+    const fields = ['name', 'phone', 'location', 'bio', 'skills', 'darkMode'];
     fields.forEach((f) => { if (req.body[f] !== undefined) req.user[f] = req.body[f]; });
     await req.user.save();
     res.json({ success: true, user: req.user });
@@ -178,7 +178,6 @@ exports.githubCallback = async (req, res) => {
     const decoded = jwt.verify(state, config.jwt.secret);
     const user = await User.findById(decoded.id);
     if (!user) return res.status(404).send('User not found');
-
     const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {
@@ -193,9 +192,6 @@ exports.githubCallback = async (req, res) => {
       })
     });
    const tokenData = await tokenRes.json();
-
-console.log("GitHub Token Response:");
-console.log(tokenData);
 
 const accessToken = tokenData.access_token;
 
@@ -241,5 +237,308 @@ if (!accessToken) {
   } catch (error) {
     console.error('GitHub OAuth error:', error);
     res.status(500).send('Authentication failed');
+  }
+};
+
+exports.googleAuth = (req, res) => {
+  const { token } = req.query;
+  const config = require('../config');
+  const clientId = config.google.clientId;
+  
+  if (!clientId || clientId === 'your-google-client-id') {
+    return res.status(400).send('OAuth Configuration Error: GOOGLE_CLIENT_ID is not configured in .env file.');
+  }
+  
+  const redirectUri = config.google.redirectUri;
+  const scope = encodeURIComponent('openid email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.modify');
+  const googleUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${encodeURIComponent(token)}&access_type=offline&prompt=consent`;
+  res.redirect(googleUrl);
+};
+
+exports.googleCallback = async (req, res) => {
+  const { code, state } = req.query;
+  const config = require('../config');
+  const OAuthAccount = require('../models/OAuthAccount');
+  const { encrypt } = require('../utils/crypto');
+  const jwt = require('jsonwebtoken');
+
+  try {
+    const decoded = jwt.verify(state, config.jwt.secret);
+    const user = await User.findById(decoded.id);
+    if (!user) return res.status(404).send('User not found');
+    
+    // REDESIGN REQUIREMENT: Only recruiters may connect Gmail/Google OAuth
+    if (user.role !== 'recruiter') {
+      return res.status(403).send('Only recruiters can connect Gmail accounts.');
+    }
+
+    const { google } = require('googleapis');
+    const oauth2Client = new google.auth.OAuth2(
+      config.google.clientId,
+      config.google.clientSecret,
+      config.google.redirectUri
+    );
+
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+
+    const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+    const userInfo = await oauth2.userinfo.get();
+    const profileData = userInfo.data;
+
+    // Save user profile details to User model
+    user.googleId = profileData.id;
+    user.googleEmail = profileData.email;
+    user.googleName = profileData.name;
+    user.googlePicture = profileData.picture || '';
+    user.googleConnected = true;
+    user.lastGoogleSync = new Date();
+    await user.save();
+
+    // Store encrypted tokens in OAuthAccount collection
+    await OAuthAccount.deleteOne({ userId: user._id, provider: 'google' });
+    
+    await OAuthAccount.create({
+      userId: user._id,
+      provider: 'google',
+      providerUserId: profileData.id,
+      accessToken: encrypt(tokens.access_token),
+      refreshToken: tokens.refresh_token ? encrypt(tokens.refresh_token) : undefined,
+      expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : undefined,
+      connectedAt: new Date(),
+      lastSynced: new Date()
+    });
+
+    res.redirect(`${config.clientUrl}/#/recruiter/email-center`);
+  } catch (error) {
+    console.error('Google OAuth callback error:', error);
+    const config = require('../config');
+    const redirectUrl = `${config.clientUrl}/#/recruiter/email-center?error=${encodeURIComponent(error.message || 'Connection Failed')}`;
+    res.redirect(redirectUrl);
+  }
+};
+
+exports.googleStatus = (req, res) => {
+  const config = require('../config');
+  const hasId = !!config.google.clientId && config.google.clientId !== 'your-google-client-id';
+  const hasSecret = !!config.google.clientSecret && config.google.clientSecret !== 'your-google-client-secret';
+  res.json({
+    configured: hasId && hasSecret,
+    clientIdPresent: hasId,
+    clientSecretPresent: hasSecret,
+    callbackUrl: config.google.redirectUri,
+    routesRegistered: true
+  });
+};
+
+exports.googleDisconnect = async (req, res) => {
+  try {
+    const OAuthAccount = require('../models/OAuthAccount');
+    req.user.googleConnected = false;
+    req.user.googleId = '';
+    req.user.googleEmail = '';
+    req.user.googleName = '';
+    req.user.googlePicture = '';
+    req.user.lastGoogleSync = undefined;
+    await req.user.save();
+
+    await OAuthAccount.deleteOne({ userId: req.user._id, provider: 'google' });
+    res.json({ success: true, message: 'Google disconnected' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Recruiter Send Email
+exports.recruiterSendEmail = async (req, res) => {
+  try {
+    if (req.user.role !== 'recruiter') {
+      return res.status(403).json({ success: false, message: 'Recruiter access only' });
+    }
+    const gmailService = require('../services/gmailService');
+    const result = await gmailService.sendEmail(req.user._id, req.body);
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Recruiter Reply to Email Thread
+exports.recruiterReplyEmail = async (req, res) => {
+  try {
+    if (req.user.role !== 'recruiter') {
+      return res.status(403).json({ success: false, message: 'Recruiter access only' });
+    }
+    const gmailService = require('../services/gmailService');
+    const result = await gmailService.replyEmail(req.user._id, req.body.threadId, req.body);
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Recruiter Get Categorized Emails
+exports.recruiterGetEmails = async (req, res) => {
+  try {
+    if (req.user.role !== 'recruiter') {
+      return res.status(403).json({ success: false, message: 'Recruiter access only' });
+    }
+    const OAuthAccount = require('../models/OAuthAccount');
+    const account = await OAuthAccount.findOne({ userId: req.user._id, provider: 'google' });
+    if (!account) {
+      return res.json({ success: true, connected: false, emails: [], unread: [], starred: [], sent: [], drafts: [] });
+    }
+
+    const gmailService = require('../services/gmailService');
+    const emails = await gmailService.readInbox(req.user._id, 10).catch(() => []);
+    
+    const unread = emails.filter(e => e.labelIds && e.labelIds.includes('UNREAD'));
+    const starred = emails.filter(e => e.labelIds && e.labelIds.includes('STARRED'));
+    const sent = [];
+    const drafts = [];
+
+    // Optional fetch for sent/drafts utilizing authenticated client directly
+    try {
+      const { google } = require('googleapis');
+      const config = require('../config');
+      const { decrypt } = require('../utils/crypto');
+      const auth = new google.auth.OAuth2(config.google.clientId, config.google.clientSecret, config.google.redirectUri);
+      auth.setCredentials({
+        access_token: decrypt(account.accessToken),
+        refresh_token: account.refreshToken ? decrypt(account.refreshToken) : undefined,
+        expiry_date: account.expiresAt ? new Date(account.expiresAt).getTime() : undefined
+      });
+      const gmail = google.gmail({ version: 'v1', auth });
+      const sentList = await gmail.users.messages.list({ userId: 'me', q: 'from:me', maxResults: 10 });
+      if (sentList.data.messages) {
+        for (const m of sentList.data.messages) {
+          const detail = await gmail.users.messages.get({ userId: 'me', id: m.id });
+          sent.push(detail.data);
+        }
+      }
+    } catch (_) {}
+
+    res.json({
+      success: true,
+      connected: true,
+      emails,
+      unread,
+      starred,
+      sent,
+      drafts,
+      syncStatus: {
+        lastSynced: req.user.lastGoogleSync || new Date(),
+        configured: true
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Recruiter Sync Inbox and Parse Attachments
+exports.recruiterSyncInbox = async (req, res) => {
+  try {
+    if (req.user.role !== 'recruiter') {
+      return res.status(403).json({ success: false, message: 'Recruiter access only' });
+    }
+    const gmailService = require('../services/gmailService');
+    const aiService = require('../services/aiService');
+    const Resume = require('../models/Resume');
+    const fs = require('fs');
+    const path = require('path');
+
+    const emails = await gmailService.readInbox(req.user._id, 10);
+    let parsedCount = 0;
+
+    for (const email of emails) {
+      const headers = email.payload?.headers || [];
+      const from = headers.find(h => h.name.toLowerCase() === 'from')?.value || '';
+      const emailMatch = from.match(/<([^>]+)>/) || [null, from];
+      const candidateEmail = (emailMatch[1] || from).trim().toLowerCase();
+
+      const attachments = await gmailService.downloadResumeAttachments(req.user._id, email.id).catch(() => []);
+      for (const attachment of attachments) {
+        const uploadDir = path.join(__dirname, '../public/uploads');
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        const savedFilePath = path.join(uploadDir, `email_resume_${Date.now()}_${attachment.filename}`);
+        fs.writeFileSync(savedFilePath, attachment.data);
+
+        // Find existing candidate or create new
+        let candidateUser = await User.findOne({ email: candidateEmail });
+        if (!candidateUser) {
+          const bcrypt = require('bcryptjs');
+          const dummyPassword = await bcrypt.hash('candidate123', 12);
+          candidateUser = await User.create({
+            name: candidateEmail.split('@')[0],
+            email: candidateEmail,
+            password: dummyPassword,
+            role: 'candidate',
+            emailVerified: true,
+            isVerified: true
+          });
+        }
+
+        // Run AI Resume Parser and check authenticity
+        const parsed = await aiService.parseResume(savedFilePath, candidateUser._id, { forceRegenerate: true }).catch(() => null);
+        const authenticity = await aiService.checkAuthenticity({}, candidateUser._id, { forceRegenerate: true }).catch(() => null);
+        
+        if (parsed) {
+          await Resume.create({
+            user: candidateUser._id,
+            filename: attachment.filename,
+            filepath: savedFilePath,
+            parsed: parsed.parsed,
+            score: Math.max(0, Math.min(100, parsed.score || 70)),
+            authenticityScore: authenticity?.authenticityScore || 80
+          });
+          parsedCount++;
+        }
+      }
+    }
+
+    req.user.lastGoogleSync = new Date();
+    await req.user.save();
+
+    res.json({ success: true, message: `Inbox synchronized successfully. Parsed ${parsedCount} new resumes.`, lastSynced: req.user.lastGoogleSync });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.linkedinAuth = (req, res) => {
+  res.send('LinkedIn OAuth is not configured yet.');
+};
+
+exports.linkedinCallback = (req, res) => {
+  res.send('LinkedIn OAuth is not configured yet.');
+};
+
+exports.linkedinDisconnect = async (req, res) => {
+  try {
+    req.user.linkedinConnected = false;
+    await req.user.save();
+    res.json({ success: true, message: 'LinkedIn disconnected' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.githubDisconnect = async (req, res) => {
+  try {
+    req.user.githubConnected = false;
+    req.user.githubId = '';
+    req.user.githubUsername = '';
+    req.user.githubName = '';
+    req.user.githubEmail = '';
+    req.user.githubAvatar = '';
+    req.user.githubAccessToken = '';
+    req.user.githubProfileUrl = '';
+    await req.user.save();
+    res.json({ success: true, message: 'GitHub disconnected' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };

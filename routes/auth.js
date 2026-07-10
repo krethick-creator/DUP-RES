@@ -30,5 +30,23 @@ router.get('/search', protect, auth.globalSearch);
 
 router.get('/github', auth.githubAuth);
 router.get('/github/callback', auth.githubCallback);
+router.post('/github/disconnect', protect, auth.githubDisconnect);
+
+// Google OAuth Preparation
+router.get('/google', auth.googleAuth);
+router.get('/google/callback', auth.googleCallback);
+router.get('/google/status', auth.googleStatus);
+router.post('/google/disconnect', protect, auth.googleDisconnect);
+
+// Recruiter Email Center Routes
+router.post('/google/send', protect, auth.recruiterSendEmail);
+router.post('/google/reply', protect, auth.recruiterReplyEmail);
+router.get('/google/emails', protect, auth.recruiterGetEmails);
+router.post('/google/sync', protect, auth.recruiterSyncInbox);
+
+// LinkedIn OAuth Preparation
+router.get('/linkedin', auth.linkedinAuth);
+router.get('/linkedin/callback', auth.linkedinCallback);
+router.post('/linkedin/disconnect', protect, auth.linkedinDisconnect);
 
 module.exports = router;

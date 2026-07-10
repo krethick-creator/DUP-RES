@@ -201,5 +201,41 @@ module.exports = {
     candidateAssistantPrompt: ({ action, context }) => baseInstruction(
         'Provide a helpful response for a candidate request.',
         `Return JSON: response (string), suggestions (array), summary (string).\nAction:${action || 'help'}\nContext:${JSON.stringify(context || {})}`
+    ),
+
+    repositoryAnalysisPrompt: ({ repo }) => baseInstruction(
+        'Analyze a single GitHub repository and provide deep technical insights.',
+        `Return JSON: summary (string), techStack (array of strings), frameworks (array of strings), architecture (string), complexityScore (0-100), documentationScore (0-100), codeQualityScore (0-100), suggestions (array of strings), estimatedExperienceLevel (string).\nRepo:${JSON.stringify(repo || {})}`
+    ),
+
+    commitAnalysisPrompt: ({ commits, stats }) => baseInstruction(
+        'Analyze git commits and activity to extract coding habits and consistency.',
+        `Return JSON: commitFrequency (string), codingConsistency (0-100), weeklyActivity (array of numbers), monthlyActivity (array of numbers), developmentTimeline (string), longestCodingStreak (number), contributionHeatmap (object of date keys to count values).\nCommits:${JSON.stringify(commits || [])}\nStats:${JSON.stringify(stats || {})}`
+    ),
+
+    pullRequestAnalysisPrompt: ({ pulls }) => baseInstruction(
+        'Analyze GitHub pull requests to assess collaboration and review practices.',
+        `Return JSON: totalPRs (number), mergedPRs (number), openPRs (number), reviewParticipation (string), mergeSuccessRate (0-100), collaborationScore (0-100).\nPRs:${JSON.stringify(pulls || [])}`
+    ),
+
+    issueAnalysisPrompt: ({ issues }) => baseInstruction(
+        'Analyze GitHub issues to assess bug fixing and maintenance activity.',
+        `Return JSON: openedIssues (number), closedIssues (number), bugFixes (number), featureRequests (number), maintenanceActivity (string).\nIssues:${JSON.stringify(issues || [])}`
+    ),
+
+    resumeGenerationPrompt: ({ repos, languages }) => baseInstruction(
+        'Extract projects from GitHub repositories and formulate resume sections.',
+        `Return JSON: projects (array of objects with title, description, technologiesUsed (array), keyContributions (string), achievements (string), bulletPoints (array of strings), atsKeywords (array of strings)).\nRepos:${JSON.stringify(repos || [])}\nLanguages:${JSON.stringify(languages || [])}`
+    ),
+
+    skillDetectionPrompt: ({ repos, languages }) => baseInstruction(
+        'Automatically detect programming skills, tools, and package managers from GitHub data.',
+        `Return JSON: languages (array of strings), frameworks (array of strings), libraries (array of strings), databases (array of strings), cloud (array of strings), devops (array of strings), testing (array of strings), tools (array of strings), packageManagers (array of strings).\nRepos:${JSON.stringify(repos || [])}\nLanguages:${JSON.stringify(languages || [])}`
+    ),
+
+    companyMatchingPrompt: ({ profile, jobSkills, job }) => baseInstruction(
+        'Match candidate to job specifications based on their GitHub capabilities.',
+        `Return JSON: matchScore (0-100), matchesSkills (array of strings), missingSkills (array of strings), matchesFrameworks (array of strings), contributionScore (0-100), reasoning (string).\nProfile:${JSON.stringify(profile || {})}\nJobSkills:${JSON.stringify(jobSkills || [])}\nJob:${JSON.stringify(job || {})}`
     )
 };
+

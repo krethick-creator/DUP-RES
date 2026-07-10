@@ -8,20 +8,20 @@ const githubService = require('../services/githubService');
 
 exports.githubConnect = async (req, res) => {
   try {
-    const { username } = req.body;
-    if (!username) {
-      const profile = await GitHubProfile.findOne({ user: req.user._id });
-      return res.json({ success: true, profile });
+    // If first connect or already connected, automatically sync using user's stored OAuth token
+    if (!req.user.githubConnected) {
+      return res.status(400).json({ success: false, message: 'Please connect your GitHub account via OAuth first.' });
     }
 
-    const synced = await githubService.syncUserGitHubData(req.user._id, username);
-    const analysis = await aiService.analyzeGitHub(synced.repos, { githubUsername: username }, req.user._id, { forceRegenerate: true });
+    // syncAllGitHubData checks cache and only calls GitHub if lastSynced is older than 24h or forceSync is true
+    const synced = await githubService.syncAllGitHubData(req.user._id, false);
+    const analysis = await aiService.analyzeGitHub(synced.repos, req.user, req.user._id, { forceRegenerate: false });
 
     const profile = await GitHubProfile.findOneAndUpdate(
       { user: req.user._id },
       {
         user: req.user._id,
-        username,
+        username: req.user.githubUsername,
         repos: analysis.repos || [],
         totalCommits: synced.totalCommits || analysis.totalCommits || 0,
         totalPRs: synced.totalPRs || analysis.totalPRs || 0,
@@ -40,12 +40,6 @@ exports.githubConnect = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    if (req.user.role === 'candidate') {
-      req.user.githubUsername = username;
-      req.user.githubConnected = true;
-      await req.user.save();
-    }
-
     res.json({ success: true, profile, repositories: synced.repos });
   } catch (error) {
     if (error.status === 429) return res.status(429).json({ success: false, message: error.message });
@@ -55,8 +49,14 @@ exports.githubConnect = async (req, res) => {
 
 exports.getGitHubProfile = async (req, res) => {
   try {
-    const profile = await GitHubProfile.findOne({ user: req.user._id });
-    const repositories = await GitHubRepository.find({ user: req.user._id });
+    // Determine which user profile to fetch (logged-in user or candidate ID passed by recruiter)
+    let targetUserId = req.user._id;
+    if (req.user.role === 'recruiter' && req.query.candidateId) {
+      targetUserId = req.query.candidateId;
+    }
+
+    const profile = await GitHubProfile.findOne({ user: targetUserId });
+    const repositories = await GitHubRepository.find({ user: targetUserId });
     res.json({ success: true, profile, repositories });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -66,7 +66,8 @@ exports.getGitHubProfile = async (req, res) => {
 exports.syncGitHub = async (req, res) => {
   try {
     const userId = req.user._id;
-    const synced = await githubService.syncUserGitHubData(userId);
+    // Always force sync when clicking 'Sync GitHub'
+    const synced = await githubService.syncAllGitHubData(userId, true);
     const analysis = await aiService.analyzeGitHub(synced.repos, req.user, userId, { forceRegenerate: true });
 
     const profile = await GitHubProfile.findOneAndUpdate(
@@ -91,9 +92,6 @@ exports.syncGitHub = async (req, res) => {
       },
       { upsert: true, new: true }
     );
-
-    req.user.githubConnected = true;
-    await req.user.save();
 
     res.json({ success: true, profile, repositories: synced.repos });
   } catch (error) {
@@ -400,3 +398,127 @@ exports.explainScore = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+const getTargetUserId = (req) => {
+  if (req.user.role === 'recruiter' && req.query.candidateId) {
+    return req.query.candidateId;
+  }
+  return req.user._id;
+};
+
+exports.getRepositoryAnalysis = async (req, res) => {
+  try {
+    const targetUserId = getTargetUserId(req);
+    const repoName = req.params.repoName;
+    const repo = await GitHubRepository.findOne({ user: targetUserId, name: repoName });
+    if (!repo) return res.status(404).json({ success: false, message: 'Repository not found' });
+    const force = req.query.regenerate === 'true';
+    const analysis = await aiService.analyzeRepository(repo, targetUserId, { forceRegenerate: force });
+    res.json({ success: true, analysis });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getCommitAnalysis = async (req, res) => {
+  try {
+    const targetUserId = getTargetUserId(req);
+    const commits = await GitHubCommit.find({ user: targetUserId });
+    const stats = await GitHubContributionStats.findOne({ user: targetUserId });
+    const force = req.query.regenerate === 'true';
+    const analysis = await aiService.analyzeCommits(commits, stats || {}, targetUserId, { forceRegenerate: force });
+    res.json({ success: true, analysis });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getPRAnalysis = async (req, res) => {
+  try {
+    const targetUserId = getTargetUserId(req);
+    const pulls = await GitHubPullRequest.find({ user: targetUserId });
+    const force = req.query.regenerate === 'true';
+    const analysis = await aiService.analyzePullRequests(pulls, targetUserId, { forceRegenerate: force });
+    res.json({ success: true, analysis });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getIssueAnalysis = async (req, res) => {
+  try {
+    const targetUserId = getTargetUserId(req);
+    const issues = await GitHubIssue.find({ user: targetUserId });
+    const force = req.query.regenerate === 'true';
+    const analysis = await aiService.analyzeIssues(issues, targetUserId, { forceRegenerate: force });
+    res.json({ success: true, analysis });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getGeneratedResume = async (req, res) => {
+  try {
+    const targetUserId = getTargetUserId(req);
+    const repos = await GitHubRepository.find({ user: targetUserId });
+    const languages = await GitHubLanguage.find({ user: targetUserId });
+    const force = req.query.regenerate === 'true';
+    const analysis = await aiService.generateResumeFromGitHub(repos, languages, targetUserId, { forceRegenerate: force });
+    res.json({ success: true, analysis });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getDetectedSkills = async (req, res) => {
+  try {
+    const targetUserId = getTargetUserId(req);
+    const repos = await GitHubRepository.find({ user: targetUserId });
+    const languages = await GitHubLanguage.find({ user: targetUserId });
+    const force = req.query.regenerate === 'true';
+    const analysis = await aiService.detectSkills(repos, languages, targetUserId, { forceRegenerate: force });
+    res.json({ success: true, analysis });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getCompanyMatch = async (req, res) => {
+  try {
+    const targetUserId = getTargetUserId(req);
+    const profile = await GitHubProfile.findOne({ user: targetUserId });
+    if (!profile) return res.status(404).json({ success: false, message: 'GitHub Profile cache not found' });
+    const jobSkills = req.body.jobSkills || [];
+    const job = req.body.job || {};
+    const force = req.query.regenerate === 'true';
+    const analysis = await aiService.companyMatching(profile, jobSkills, job, targetUserId, { forceRegenerate: force });
+    res.json({ success: true, analysis });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getCandidateInsights = async (req, res) => {
+  try {
+    const targetUserId = getTargetUserId(req);
+    const profile = await GitHubProfile.findOne({ user: targetUserId });
+    const repos = await GitHubRepository.find({ user: targetUserId });
+    const languages = await GitHubLanguage.find({ user: targetUserId });
+    const stats = await GitHubContributionStats.findOne({ user: targetUserId });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Candidate has not connected GitHub or synced profile yet.' });
+    }
+
+    res.json({
+      success: true,
+      profile,
+      repositoriesCount: repos.length,
+      languages,
+      stats
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
