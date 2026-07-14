@@ -54,6 +54,29 @@ const UI = {
     return emoji;
   },
 
+  logo(sizeClass = 'sidebar') {
+    const sizes = {
+      sidebar: 'width: 40px; height: 40px;',
+      collapsed: 'width: 32px; height: 32px;',
+      navbar: 'width: 36px; height: 36px;',
+      login: 'width: 90px; height: 90px;',
+      splash: 'width: 120px; height: 120px;',
+      favicon: 'width: 32px; height: 32px;'
+    };
+    const sizeStyle = sizes[sizeClass] || sizes.sidebar;
+    return `<img src="/assets/images/logo/logo.png" class="zn-logo-img" style="${sizeStyle}" alt="TalentAI Logo">`;
+  },
+
+  applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    const isDark = theme === 'dark';
+    document.querySelectorAll('#dark-mode-toggle, #settings-dark-toggle').forEach(t => {
+      if (isDark) t.classList.add('active');
+      else t.classList.remove('active');
+    });
+  },
+
   toast(message, type = 'info') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -258,9 +281,20 @@ const UI = {
       });
     });
 
-    document.getElementById('dark-mode-toggle')?.addEventListener('click', function () {
-      this.classList.toggle('active');
-      document.documentElement.setAttribute('data-theme', this.classList.contains('active') ? 'dark' : 'light');
+    const toggle = document.getElementById('dark-mode-toggle');
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (toggle) {
+      if (isDark) toggle.classList.add('active');
+      else toggle.classList.remove('active');
+    }
+
+    toggle?.addEventListener('click', function () {
+      const active = this.classList.toggle('active');
+      const newTheme = active ? 'dark' : 'light';
+      UI.applyTheme(newTheme);
+      if (API.token) {
+        API.put('/auth/profile', { darkMode: active }).catch(() => {});
+      }
     });
 
     let searchTimeout;

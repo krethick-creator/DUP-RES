@@ -1,0 +1,53 @@
+{
+  "id": "18",
+  "key": "fullstack",
+  "name": "Fullstack",
+  "category": "Technology",
+  "description": "A professionally optimized Fullstack layout matching modern recruitment standards.",
+  "atsScore": 96,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 755,
+  "downloads": 1914,
+  "favoritesCount": 286,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Fullstack",
+  "Category": "Technology",
+  "Description": "A professionally optimized Fullstack layout matching modern recruitment standards.",
+  "ATS Score": 96,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#064E3B",
+  "Secondary Color": "#111827",
+  "Accent Color": "#10B981",
+  "Fonts": [
+    "Lora"
+  ],
+  "Layout": "two-column",
+  "Sidebar": "left",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

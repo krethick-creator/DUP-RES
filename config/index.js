@@ -12,6 +12,28 @@ if (googleClientId && googleClientSecret) {
   console.log('✓ Google OAuth configured');
 }
 
+const linkedinClientId = process.env.LINKEDIN_CLIENT_ID;
+const linkedinClientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+const linkedinRedirectUri = process.env.LINKEDIN_REDIRECT_URI;
+
+if (linkedinClientId) {
+  console.log('✓ LinkedIn Client ID Loaded');
+} else {
+  console.error('✗ Missing LINKEDIN_CLIENT_ID');
+}
+
+if (linkedinClientSecret) {
+  console.log('✓ LinkedIn Client Secret Loaded');
+} else {
+  console.error('✗ Missing LINKEDIN_CLIENT_SECRET');
+}
+
+if (linkedinRedirectUri) {
+  console.log('✓ LinkedIn Redirect URI Loaded');
+} else {
+  console.error('✗ Missing LINKEDIN_REDIRECT_URI');
+}
+
 module.exports = {
   port: process.env.PORT || 5000,
   nodeEnv: process.env.NODE_ENV || 'development',

@@ -1,0 +1,53 @@
+{
+  "id": "2",
+  "key": "microsoft-professional",
+  "name": "Microsoft Professional",
+  "category": "Professional",
+  "description": "A professionally optimized Microsoft Professional layout matching modern recruitment standards.",
+  "atsScore": 91,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Roboto",
+  "popularity": 515,
+  "downloads": 1242,
+  "favoritesCount": 158,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Microsoft Professional",
+  "Category": "Professional",
+  "Description": "A professionally optimized Microsoft Professional layout matching modern recruitment standards.",
+  "ATS Score": 91,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#064E3B",
+  "Secondary Color": "#111827",
+  "Accent Color": "#10B981",
+  "Fonts": [
+    "Roboto"
+  ],
+  "Layout": "two-column",
+  "Sidebar": "left",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

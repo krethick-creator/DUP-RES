@@ -1,0 +1,22 @@
+{
+  "id": "36",
+  "key": "academic",
+  "name": "Academic",
+  "category": "Research",
+  "description": "A professionally optimized Academic layout matching modern recruitment standards.",
+  "atsScore": 95,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 1025,
+  "downloads": 2670,
+  "favoritesCount": 430,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

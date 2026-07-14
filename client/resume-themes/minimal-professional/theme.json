@@ -1,0 +1,22 @@
+{
+  "id": "10",
+  "key": "minimal-professional",
+  "name": "Minimal Professional",
+  "category": "Minimal",
+  "description": "A professionally optimized Minimal Professional layout matching modern recruitment standards.",
+  "atsScore": 99,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Inter",
+  "popularity": 635,
+  "downloads": 1578,
+  "favoritesCount": 222,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

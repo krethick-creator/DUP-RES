@@ -1,0 +1,22 @@
+{
+  "id": "45",
+  "key": "graduate",
+  "name": "Graduate",
+  "category": "Student",
+  "description": "A professionally optimized Graduate layout matching modern recruitment standards.",
+  "atsScore": 94,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 1160,
+  "downloads": 3048,
+  "favoritesCount": 502,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

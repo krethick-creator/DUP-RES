@@ -1,0 +1,22 @@
+{
+  "id": "11",
+  "key": "executive",
+  "name": "Executive",
+  "category": "Executive",
+  "description": "A professionally optimized Executive layout matching modern recruitment standards.",
+  "atsScore": 90,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Roboto",
+  "popularity": 650,
+  "downloads": 1620,
+  "favoritesCount": 230,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

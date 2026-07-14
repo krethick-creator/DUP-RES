@@ -1,0 +1,22 @@
+{
+  "id": "5",
+  "key": "meta-modern",
+  "name": "Meta Modern",
+  "category": "Creative",
+  "description": "A professionally optimized Meta Modern layout matching modern recruitment standards.",
+  "atsScore": 94,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Roboto",
+  "popularity": 560,
+  "downloads": 1368,
+  "favoritesCount": 182,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

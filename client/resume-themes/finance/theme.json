@@ -1,0 +1,22 @@
+{
+  "id": "39",
+  "key": "finance",
+  "name": "Finance",
+  "category": "Business",
+  "description": "A professionally optimized Finance layout matching modern recruitment standards.",
+  "atsScore": 98,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 1070,
+  "downloads": 2796,
+  "favoritesCount": 454,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

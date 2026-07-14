@@ -10,9 +10,8 @@ const AuthPage = {
       <div class="auth-page gradient-bg">
         <div class="glass-card auth-card animate-scale-in">
           <div class="text-center mb-4">
-            <div class="logo justify-center" style="display:flex">
-              <div class="logo-icon">AI</div>
-              <span>TalentAI</span>
+            <div class="logo justify-center" style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+              ${UI.logo('login')}
             </div>
           </div>
           <h2>${this.mode === 'login' ? 'Welcome back' : 'Create account'}</h2>

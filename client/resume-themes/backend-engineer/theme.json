@@ -1,0 +1,23 @@
+{
+  "id": "16",
+  "key": "backend-engineer",
+  "name": "Backend Engineer",
+  "category": "Technology",
+  "description": "A professionally optimized Backend Engineer layout matching modern recruitment standards.",
+  "atsScore": 95,
+  "bestFor": "Software Engineering Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Inter",
+  "popularity": 725,
+  "downloads": 1830,
+  "favoritesCount": 270,
+  "companyRecommendations": [
+    "Google",
+    "Stripe",
+    "Meta"
+  ]
+}

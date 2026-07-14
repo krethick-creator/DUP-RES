@@ -1,0 +1,53 @@
+{
+  "id": "1",
+  "key": "google-professional",
+  "name": "Google Professional",
+  "category": "Professional",
+  "description": "A professionally optimized Google Professional layout matching modern recruitment standards.",
+  "atsScore": 90,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Inter",
+  "popularity": 500,
+  "downloads": 1200,
+  "favoritesCount": 150,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Google Professional",
+  "Category": "Professional",
+  "Description": "A professionally optimized Google Professional layout matching modern recruitment standards.",
+  "ATS Score": 90,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#0F172A",
+  "Secondary Color": "#475569",
+  "Accent Color": "#2563EB",
+  "Fonts": [
+    "Inter"
+  ],
+  "Layout": "single-column",
+  "Sidebar": "none",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

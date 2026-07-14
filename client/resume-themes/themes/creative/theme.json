@@ -1,0 +1,53 @@
+{
+  "id": "13",
+  "key": "creative",
+  "name": "Creative",
+  "category": "Creative",
+  "description": "A professionally optimized Creative layout matching modern recruitment standards.",
+  "atsScore": 91,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Inter",
+  "popularity": 680,
+  "downloads": 1704,
+  "favoritesCount": 246,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Creative",
+  "Category": "Creative",
+  "Description": "A professionally optimized Creative layout matching modern recruitment standards.",
+  "ATS Score": 91,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#0F172A",
+  "Secondary Color": "#475569",
+  "Accent Color": "#2563EB",
+  "Fonts": [
+    "Inter"
+  ],
+  "Layout": "single-column",
+  "Sidebar": "none",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

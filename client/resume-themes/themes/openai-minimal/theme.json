@@ -1,0 +1,53 @@
+{
+  "id": "8",
+  "key": "openai-minimal",
+  "name": "Openai Minimal",
+  "category": "Minimal",
+  "description": "A professionally optimized Openai Minimal layout matching modern recruitment standards.",
+  "atsScore": 97,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Roboto",
+  "popularity": 605,
+  "downloads": 1494,
+  "favoritesCount": 206,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Openai Minimal",
+  "Category": "Minimal",
+  "Description": "A professionally optimized Openai Minimal layout matching modern recruitment standards.",
+  "ATS Score": 97,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#064E3B",
+  "Secondary Color": "#111827",
+  "Accent Color": "#10B981",
+  "Fonts": [
+    "Roboto"
+  ],
+  "Layout": "two-column",
+  "Sidebar": "left",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

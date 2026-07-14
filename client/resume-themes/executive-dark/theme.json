@@ -1,0 +1,22 @@
+{
+  "id": "12",
+  "key": "executive-dark",
+  "name": "Executive Dark",
+  "category": "Executive",
+  "description": "A professionally optimized Executive Dark layout matching modern recruitment standards.",
+  "atsScore": 91,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 665,
+  "downloads": 1662,
+  "favoritesCount": 238,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

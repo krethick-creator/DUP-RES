@@ -118,10 +118,41 @@ const API = {
 
   // GitHub REST Caching API
   getGithubProfile: (candidateId = '') => API.get(`/github/profile${candidateId ? '?candidateId=' + candidateId : ''}`),
+  getLinkedinProfile: (candidateId = '') => API.get(`/linkedin/profile${candidateId ? '?candidateId=' + candidateId : ''}`),
   getGithubRepositories: (candidateId = '') => API.get(`/github/repositories${candidateId ? '?candidateId=' + candidateId : ''}`),
   getGithubCommits: (candidateId = '') => API.get(`/github/commits${candidateId ? '?candidateId=' + candidateId : ''}`),
   getGithubPRs: (candidateId = '') => API.get(`/github/pullrequests${candidateId ? '?candidateId=' + candidateId : ''}`),
   getGithubIssues: (candidateId = '') => API.get(`/github/issues${candidateId ? '?candidateId=' + candidateId : ''}`),
   getGithubLanguages: (candidateId = '') => API.get(`/github/languages${candidateId ? '?candidateId=' + candidateId : ''}`),
-  syncGithub: () => API.post('/github/sync', {})
+  syncGithub: () => API.post('/github/sync', {}),
+
+  // Organization Collaboration & Workflow API
+  createOrg: (data) => API.post('/org/create', data),
+  getOrgs: () => API.get('/org/list'),
+  getOrg: (id) => API.get(`/org/${id}`),
+  deleteOrg: (id) => API.delete(`/org/${id}`),
+  addDepartment: (orgId, data) => API.post(`/org/${orgId}/departments`, data),
+  addTeam: (orgId, data) => API.post(`/org/${orgId}/teams`, data),
+  inviteMember: (orgId, data) => API.post(`/org/${orgId}/invite`, data),
+  removeMember: (orgId, memberId) => API.post(`/org/${orgId}/remove-member`, { memberId }),
+  getPipeline: (orgId) => API.get(`/org/${orgId}/pipeline`),
+  moveCandidate: (data) => API.post('/org/pipeline/move', data),
+  addComment: (cardId, content) => API.post(`/org/pipeline/${cardId}/comments`, { content }),
+  addTask: (cardId, data) => API.post(`/org/pipeline/${cardId}/tasks`, data),
+  toggleTask: (cardId, taskId) => API.post(`/org/pipeline/${cardId}/tasks/toggle`, { taskId }),
+  getWorkload: (orgId) => API.get(`/org/${orgId}/workload`),
+  detectConflict: (cardId) => API.get(`/org/pipeline/${cardId}/conflict`),
+  getKnowledgeGraph: (orgId) => API.get(`/org/${orgId}/graph`),
+  getAuditLogs: (orgId) => API.get(`/org/${orgId}/audit-logs`),
+
+  // AI Resume Theme Marketplace API
+  getThemes: () => API.get('/resumes/themes'),
+  getThemeById: (id) => API.get(`/resumes/theme/${id}`),
+  applyTheme: (resumeId, themeName) => API.post('/resumes/theme/apply', { resumeId, themeName }),
+  favoriteTheme: (resumeId, themeId) => API.post('/resumes/theme/favorite', { resumeId, themeId }),
+  customizeTheme: (resumeId, customization) => API.post('/resumes/theme/customize', { resumeId, customization }),
+  generateAITheme: (resumeId, prompt) => API.post('/resumes/theme/generate', { resumeId, prompt }),
+  optimizeResume: (resumeId, jobDescription) => API.post('/resumes/optimize', { resumeId, jobDescription }),
+  getVersions: (resumeId) => API.get(`/resumes/versions?resumeId=${resumeId}`),
+  restoreVersion: (resumeId, versionNumber) => API.post('/resumes/version/restore', { resumeId, versionNumber })
 };

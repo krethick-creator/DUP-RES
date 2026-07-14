@@ -1,0 +1,55 @@
+{
+  "id": "30",
+  "key": "cloud-engineer",
+  "name": "Cloud Engineer",
+  "category": "Technology",
+  "description": "A professionally optimized Cloud Engineer layout matching modern recruitment standards.",
+  "atsScore": 97,
+  "bestFor": "Software Engineering Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 935,
+  "downloads": 2418,
+  "favoritesCount": 382,
+  "companyRecommendations": [
+    "Google",
+    "Stripe",
+    "Meta"
+  ],
+  "Theme Name": "Cloud Engineer",
+  "Category": "Technology",
+  "Description": "A professionally optimized Cloud Engineer layout matching modern recruitment standards.",
+  "ATS Score": 97,
+  "Best For": "Software Engineering Roles",
+  "Company Recommendation": [
+    "Google",
+    "Stripe",
+    "Meta"
+  ],
+  "Primary Color": "#064E3B",
+  "Secondary Color": "#111827",
+  "Accent Color": "#10B981",
+  "Fonts": [
+    "Lora"
+  ],
+  "Layout": "two-column",
+  "Sidebar": "left",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

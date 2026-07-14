@@ -1,0 +1,23 @@
+{
+  "id": "26",
+  "key": "ai-engineer",
+  "name": "Ai Engineer",
+  "category": "Technology",
+  "description": "A professionally optimized Ai Engineer layout matching modern recruitment standards.",
+  "atsScore": 95,
+  "bestFor": "Software Engineering Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Roboto",
+  "popularity": 875,
+  "downloads": 2250,
+  "favoritesCount": 350,
+  "companyRecommendations": [
+    "Google",
+    "Stripe",
+    "Meta"
+  ]
+}

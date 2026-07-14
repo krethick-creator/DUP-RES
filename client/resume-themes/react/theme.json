@@ -1,0 +1,22 @@
+{
+  "id": "23",
+  "key": "react",
+  "name": "React",
+  "category": "Technology",
+  "description": "A professionally optimized React layout matching modern recruitment standards.",
+  "atsScore": 92,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Roboto",
+  "popularity": 830,
+  "downloads": 2124,
+  "favoritesCount": 326,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

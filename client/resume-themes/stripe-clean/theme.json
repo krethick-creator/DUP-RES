@@ -1,0 +1,22 @@
+{
+  "id": "6",
+  "key": "stripe-clean",
+  "name": "Stripe Clean",
+  "category": "Professional",
+  "description": "A professionally optimized Stripe Clean layout matching modern recruitment standards.",
+  "atsScore": 95,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 575,
+  "downloads": 1410,
+  "favoritesCount": 190,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

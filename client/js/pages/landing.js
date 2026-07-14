@@ -3,9 +3,9 @@ const LandingPage = {
     return `
       <nav class="landing-nav">
         <div class="container flex justify-between items-center">
-          <div class="logo">
-            <div class="logo-icon">AI</div>
-            <span>TalentAI</span>
+          <div class="logo" style="display:flex; align-items:center; gap:8px;">
+            ${UI.logo('navbar')}
+            <span style="font-weight:700; font-size:1.1rem; color:var(--text);">TalentAI</span>
           </div>
           <div class="flex items-center gap-4">
             <a href="#/login" class="btn btn-ghost">Sign In</a>

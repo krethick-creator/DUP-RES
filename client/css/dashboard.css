@@ -560,3 +560,25 @@
 
 .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 .page-btn:hover:not(.active) { background: var(--bg-secondary); }
+
+/* Centralized ZN Logo Styles */
+.zn-logo-img {
+  object-fit: contain;
+  transition: transform 250ms ease, filter 250ms ease, opacity 250ms ease;
+  cursor: pointer;
+  image-rendering: -webkit-optimize-contrast;
+}
+.zn-logo-img:hover {
+  transform: scale(1.03);
+  opacity: 0.95;
+}
+
+[data-theme="light"] .zn-logo-img,
+html[data-theme="light"] .zn-logo-img {
+  filter: none !important;
+}
+
+[data-theme="dark"] .zn-logo-img,
+html[data-theme="dark"] .zn-logo-img {
+  filter: brightness(0) invert(1) !important;
+}

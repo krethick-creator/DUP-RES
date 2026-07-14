@@ -1,0 +1,53 @@
+{
+  "id": "48",
+  "key": "europass",
+  "name": "Europass",
+  "category": "Professional",
+  "description": "A professionally optimized Europass layout matching modern recruitment standards.",
+  "atsScore": 93,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 1205,
+  "downloads": 3174,
+  "favoritesCount": 526,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Europass",
+  "Category": "Professional",
+  "Description": "A professionally optimized Europass layout matching modern recruitment standards.",
+  "ATS Score": 93,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#064E3B",
+  "Secondary Color": "#111827",
+  "Accent Color": "#10B981",
+  "Fonts": [
+    "Lora"
+  ],
+  "Layout": "two-column",
+  "Sidebar": "left",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

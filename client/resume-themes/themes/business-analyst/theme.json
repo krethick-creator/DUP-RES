@@ -1,0 +1,53 @@
+{
+  "id": "42",
+  "key": "business-analyst",
+  "name": "Business Analyst",
+  "category": "Business",
+  "description": "A professionally optimized Business Analyst layout matching modern recruitment standards.",
+  "atsScore": 98,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 1115,
+  "downloads": 2922,
+  "favoritesCount": 478,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Business Analyst",
+  "Category": "Business",
+  "Description": "A professionally optimized Business Analyst layout matching modern recruitment standards.",
+  "ATS Score": 98,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#064E3B",
+  "Secondary Color": "#111827",
+  "Accent Color": "#10B981",
+  "Fonts": [
+    "Lora"
+  ],
+  "Layout": "two-column",
+  "Sidebar": "left",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

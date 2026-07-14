@@ -1,0 +1,22 @@
+{
+  "id": "4",
+  "key": "apple-minimal",
+  "name": "Apple Minimal",
+  "category": "Minimal",
+  "description": "A professionally optimized Apple Minimal layout matching modern recruitment standards.",
+  "atsScore": 93,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Inter",
+  "popularity": 545,
+  "downloads": 1326,
+  "favoritesCount": 174,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

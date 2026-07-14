@@ -1,0 +1,53 @@
+{
+  "id": "15",
+  "key": "technology",
+  "name": "Technology",
+  "category": "Technology",
+  "description": "A professionally optimized Technology layout matching modern recruitment standards.",
+  "atsScore": 93,
+  "bestFor": "Software Engineering Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 710,
+  "downloads": 1788,
+  "favoritesCount": 262,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Technology",
+  "Category": "Technology",
+  "Description": "A professionally optimized Technology layout matching modern recruitment standards.",
+  "ATS Score": 93,
+  "Best For": "Software Engineering Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#0F172A",
+  "Secondary Color": "#475569",
+  "Accent Color": "#2563EB",
+  "Fonts": [
+    "Lora"
+  ],
+  "Layout": "single-column",
+  "Sidebar": "none",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

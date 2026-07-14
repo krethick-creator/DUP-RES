@@ -1,0 +1,53 @@
+{
+  "id": "41",
+  "key": "product-manager",
+  "name": "Product Manager",
+  "category": "Business",
+  "description": "A professionally optimized Product Manager layout matching modern recruitment standards.",
+  "atsScore": 97,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Roboto",
+  "popularity": 1100,
+  "downloads": 2880,
+  "favoritesCount": 470,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Product Manager",
+  "Category": "Business",
+  "Description": "A professionally optimized Product Manager layout matching modern recruitment standards.",
+  "ATS Score": 97,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#0F172A",
+  "Secondary Color": "#475569",
+  "Accent Color": "#2563EB",
+  "Fonts": [
+    "Roboto"
+  ],
+  "Layout": "single-column",
+  "Sidebar": "none",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

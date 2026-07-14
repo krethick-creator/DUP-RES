@@ -46,4 +46,13 @@ router.post('/company-goals', ai.companyGoalPlanner);
 router.get('/soft-skills', ai.softSkills);
 router.post('/explain-score', ai.explainScore);
 
+// AI Project Workspace & Recruiter Candidate Intelligence Dashboard
+router.get('/project-workspace/tree/:repoName', ai.getProjectTree);
+router.get('/project-workspace/file/:repoName', ai.getProjectFile);
+router.post('/project-workspace/chat', ai.projectWorkspaceChat);
+router.get('/project-workspace/intelligence/:repoName', ai.getProjectIntelligence);
+router.get('/project-workspace/visualizations/:repoName', ai.getProjectVisualizations);
+router.get('/candidate-intelligence/:candidateId', ai.getCandidateIntelligence);
+
 module.exports = router;
+

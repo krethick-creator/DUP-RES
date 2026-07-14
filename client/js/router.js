@@ -44,7 +44,7 @@ const Router = {
     }
 
     // Redirect logged-in users away from auth pages
-    if (['login', 'register'].includes(route) && API.getUser()) {
+    if (['login', 'register'].includes(route) && API.getUser() && API.token) {
       const user = API.getUser();
       window.location.hash = `#/${user.role}`;
       return;

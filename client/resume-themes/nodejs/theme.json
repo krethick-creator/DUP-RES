@@ -1,0 +1,22 @@
+{
+  "id": "19",
+  "key": "nodejs",
+  "name": "Nodejs",
+  "category": "Technology",
+  "description": "A professionally optimized Nodejs layout matching modern recruitment standards.",
+  "atsScore": 98,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Inter",
+  "popularity": 770,
+  "downloads": 1956,
+  "favoritesCount": 294,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

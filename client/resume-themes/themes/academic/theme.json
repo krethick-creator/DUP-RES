@@ -1,0 +1,53 @@
+{
+  "id": "36",
+  "key": "academic",
+  "name": "Academic",
+  "category": "Research",
+  "description": "A professionally optimized Academic layout matching modern recruitment standards.",
+  "atsScore": 92,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 1025,
+  "downloads": 2670,
+  "favoritesCount": 430,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Academic",
+  "Category": "Research",
+  "Description": "A professionally optimized Academic layout matching modern recruitment standards.",
+  "ATS Score": 92,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#064E3B",
+  "Secondary Color": "#111827",
+  "Accent Color": "#10B981",
+  "Fonts": [
+    "Lora"
+  ],
+  "Layout": "two-column",
+  "Sidebar": "left",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

@@ -1,0 +1,53 @@
+{
+  "id": "12",
+  "key": "executive-dark",
+  "name": "Executive Dark",
+  "category": "Executive",
+  "description": "A professionally optimized Executive Dark layout matching modern recruitment standards.",
+  "atsScore": 90,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 665,
+  "downloads": 1662,
+  "favoritesCount": 238,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Executive Dark",
+  "Category": "Executive",
+  "Description": "A professionally optimized Executive Dark layout matching modern recruitment standards.",
+  "ATS Score": 90,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#064E3B",
+  "Secondary Color": "#111827",
+  "Accent Color": "#10B981",
+  "Fonts": [
+    "Lora"
+  ],
+  "Layout": "two-column",
+  "Sidebar": "left",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

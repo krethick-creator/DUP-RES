@@ -1,0 +1,22 @@
+{
+  "id": "9",
+  "key": "modern-professional",
+  "name": "Modern Professional",
+  "category": "Professional",
+  "description": "A professionally optimized Modern Professional layout matching modern recruitment standards.",
+  "atsScore": 98,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 620,
+  "downloads": 1536,
+  "favoritesCount": 214,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

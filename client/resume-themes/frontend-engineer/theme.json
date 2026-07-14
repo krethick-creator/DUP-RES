@@ -1,0 +1,23 @@
+{
+  "id": "17",
+  "key": "frontend-engineer",
+  "name": "Frontend Engineer",
+  "category": "Technology",
+  "description": "A professionally optimized Frontend Engineer layout matching modern recruitment standards.",
+  "atsScore": 96,
+  "bestFor": "Software Engineering Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Roboto",
+  "popularity": 740,
+  "downloads": 1872,
+  "favoritesCount": 278,
+  "companyRecommendations": [
+    "Google",
+    "Stripe",
+    "Meta"
+  ]
+}

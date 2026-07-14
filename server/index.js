@@ -32,6 +32,8 @@ app.use('/api/jobs', require('../routes/jobs'));
 app.use('/api/applications', require('../routes/applications'));
 app.use('/api/ai', require('../routes/ai'));
 app.use('/api/github', require('../routes/github'));
+app.use('/api/org', require('../routes/org'));
+app.use('/api/linkedin', require('../routes/linkedin'));
 
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
@@ -50,8 +52,38 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: err.message || 'Server Error' });
 });
 
+const http = require('http');
+const socketIo = require('socket.io');
+
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: config.clientUrl,
+    credentials: true
+  }
+});
+
+app.set('socketio', io);
+
+io.on('connection', (socket) => {
+  console.log('[Socket] Member connected:', socket.id);
+
+  socket.on('join_org', (orgId) => {
+    socket.join(orgId);
+    console.log(`[Socket] Member ${socket.id} joined Org room: ${orgId}`);
+  });
+
+  socket.on('typing', (data) => {
+    socket.to(data.orgId).emit('typing', { username: data.username, cardId: data.cardId });
+  });
+
+  socket.on('disconnect', () => {
+    console.log('[Socket] Member disconnected:', socket.id);
+  });
+});
+
 const PORT = config.port;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Open http://localhost:${PORT}`);
 });

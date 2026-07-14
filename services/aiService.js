@@ -3,6 +3,23 @@ const prompts = require('./aiPrompts');
 
 const MODEL = 'gemini-2.5-flash';
 
+const getLinkedInData = async (userId) => {
+  if (!userId) return null;
+  try {
+    const LinkedInProfile = require('../models/LinkedInProfile');
+    const profile = await LinkedInProfile.findOne({ user: userId });
+    if (profile) {
+      return {
+        name: profile.name,
+        headline: profile.headline,
+        profileUrl: profile.profileUrl,
+        email: profile.email
+      };
+    }
+  } catch (_) {}
+  return null;
+};
+
 // Every AI capability uses the same Gemini client and a dedicated prompt so the experience stays modular.
 const callGemini = async (promptFactory, payload, fallback, userId = null, options = {}) => {
   const featureName = options.featureName || 'general-ai';
@@ -80,7 +97,8 @@ exports.screenResume = async (resume, job, userId = null, options = {}) => {
     confidence: 0.5
   };
 
-  const data = await callGemini(prompts.resumeScreeningPrompt, { resume, job }, fallback, userId, options);
+  const linkedin = await getLinkedInData(userId);
+  const data = await callGemini(prompts.resumeScreeningPrompt, { resume, job, linkedin }, fallback, userId, options);
   return {
     ...data,
     module: 'resume-screening',
@@ -498,7 +516,8 @@ exports.candidateSummary = async (profile, userId = null, options = {}) => {
     nextSteps: []
   };
 
-  const data = await callGemini(prompts.candidateSummaryPrompt, { profile }, fallback, userId, options);
+  const linkedin = await getLinkedInData(userId);
+  const data = await callGemini(prompts.candidateSummaryPrompt, { profile, linkedin }, fallback, userId, options);
   return {
     ...data,
     module: 'candidate-summary',
@@ -632,7 +651,8 @@ exports.generateCareerRoadmap = async (profile, userId = null, options = {}) => 
   const repos = userId ? await GitHubRepository.find({ user: userId }).limit(10) : [];
   const repoSummary = repos.map(r => `${r.name} (${r.language || 'Unknown'}): ${r.description || ''}`).join('\n');
 
-  const data = await callGemini(prompts.careerRoadmapPrompt, { profile, repoSummary }, fallback, userId, options);
+  const linkedin = await getLinkedInData(userId);
+  const data = await callGemini(prompts.careerRoadmapPrompt, { profile, repoSummary, linkedin }, fallback, userId, options);
   return {
     ...data,
     module: 'career-roadmap',

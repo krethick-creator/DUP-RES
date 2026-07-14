@@ -1,0 +1,22 @@
+{
+  "id": "28",
+  "key": "data-scientist",
+  "name": "Data Scientist",
+  "category": "Technology",
+  "description": "A professionally optimized Data Scientist layout matching modern recruitment standards.",
+  "atsScore": 97,
+  "bestFor": "Software Engineering Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Inter",
+  "popularity": 905,
+  "downloads": 2334,
+  "favoritesCount": 366,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

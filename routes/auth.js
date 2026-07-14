@@ -47,6 +47,8 @@ router.post('/google/sync', protect, auth.recruiterSyncInbox);
 // LinkedIn OAuth Preparation
 router.get('/linkedin', auth.linkedinAuth);
 router.get('/linkedin/callback', auth.linkedinCallback);
+router.get('/linkedin/status', auth.linkedinStatus);
 router.post('/linkedin/disconnect', protect, auth.linkedinDisconnect);
+router.post('/linkedin/sync', protect, auth.linkedinSync);
 
 module.exports = router;

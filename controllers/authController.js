@@ -114,7 +114,7 @@ exports.verifyEmail = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const fields = ['name', 'phone', 'location', 'bio', 'skills', 'darkMode'];
+    const fields = ['name', 'phone', 'location', 'bio', 'skills', 'darkMode', 'linkedinProfileUrl'];
     fields.forEach((f) => { if (req.body[f] !== undefined) req.user[f] = req.body[f]; });
     await req.user.save();
     res.json({ success: true, user: req.user });
@@ -509,18 +509,235 @@ exports.recruiterSyncInbox = async (req, res) => {
 };
 
 exports.linkedinAuth = (req, res) => {
-  res.send('LinkedIn OAuth is not configured yet.');
+  const { token } = req.query;
+  const config = require('../config');
+  const clientId = config.linkedin.clientId;
+  if (!clientId || clientId === 'your-linkedin-client-id') {
+    return res.status(400).send('OAuth Configuration Error: LINKEDIN_CLIENT_ID is not configured in .env file.');
+  }
+  const redirectUri = config.linkedin.redirectUri;
+  const state = encodeURIComponent(token);
+  const scope = encodeURIComponent('openid profile email');
+  const linkedinUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${scope}`;
+  res.redirect(linkedinUrl);
 };
 
-exports.linkedinCallback = (req, res) => {
-  res.send('LinkedIn OAuth is not configured yet.');
+// Global lock map to prevent duplicate LinkedIn callbacks
+const linkedinLocks = new Map();
+
+exports.linkedinCallback = async (req, res) => {
+  const { code, state } = req.query;
+  const config = require('../config');
+  const OAuthAccount = require('../models/OAuthAccount');
+  const LinkedInProfile = require('../models/LinkedInProfile');
+  const { encrypt } = require('../utils/crypto');
+  const jwt = require('jsonwebtoken');
+
+  if (!code) {
+    return res.status(400).send('Authorization code missing');
+  }
+
+  // Prevent double processing / duplicate callback execution
+  if (linkedinLocks.has(code)) {
+    return res.redirect(`${config.clientUrl}/#/candidate/profile`);
+  }
+  linkedinLocks.set(code, Date.now());
+  setTimeout(() => linkedinLocks.delete(code), 60000);
+
+  try {
+    let decoded;
+    try {
+      decoded = jwt.verify(state, config.jwt.secret);
+    } catch (jwtErr) {
+      throw new Error(`State verification failed: ${jwtErr.message}`);
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+
+    const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+    
+    // Exchange Auth Code for Access Token
+    const tokenRes = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: config.linkedin.redirectUri,
+        client_id: config.linkedin.clientId,
+        client_secret: config.linkedin.clientSecret
+      }).toString()
+    });
+
+    if (!tokenRes.ok) {
+      const errBody = await tokenRes.text();
+      throw new Error(`Token exchange failed: ${errBody}`);
+    }
+
+    const tokenData = await tokenRes.json();
+    const accessToken = tokenData.access_token;
+
+    // Fetch LinkedIn user info
+    const profileRes = await fetch('https://api.linkedin.com/v2/userinfo', {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+
+    if (!profileRes.ok) {
+      const profileErrBody = await profileRes.text();
+      throw new Error(`Failed to retrieve userinfo from LinkedIn: ${profileErrBody}`);
+    }
+
+    const profileData = await profileRes.json();
+
+    // Map profile data to User model
+    user.linkedinConnected = true;
+    user.linkedinId = profileData.sub;
+    user.linkedinName = profileData.name || `${profileData.given_name || ''} ${profileData.family_name || ''}`.trim();
+    user.linkedinEmail = profileData.email;
+    user.linkedinHeadline = profileData.headline || 'Software Engineer Candidate';
+    user.linkedinProfilePicture = profileData.picture || '';
+    user.linkedinProfileUrl = profileData.profileUrl || '';
+    user.linkedinAccessToken = encrypt(accessToken);
+    user.lastLinkedInSync = new Date();
+
+    await user.save();
+    console.log('✓ User Updated');
+
+    // Create or Update LinkedInProfile model
+    await LinkedInProfile.findOneAndUpdate(
+      { user: user._id },
+      {
+        user: user._id,
+        linkedinId: profileData.sub,
+        name: user.linkedinName,
+        email: profileData.email,
+        headline: user.linkedinHeadline,
+        profilePicture: user.linkedinProfilePicture,
+        profileUrl: user.linkedinProfileUrl,
+        lastSynced: new Date()
+      },
+      { upsert: true, new: true }
+    );
+    console.log('✓ Profile Synced');
+
+    // Save encrypted token in OAuthAccount collection
+    await OAuthAccount.findOneAndUpdate(
+      { provider: 'linkedin', providerUserId: profileData.sub },
+      {
+        userId: user._id,
+        provider: 'linkedin',
+        providerUserId: profileData.sub,
+        accessToken: encrypt(accessToken),
+        connectedAt: new Date(),
+        lastSynced: new Date()
+      },
+      { upsert: true, new: true }
+    );
+    console.log('✓ LinkedIn Connected');
+
+    res.redirect(`${config.clientUrl}/#/candidate/profile`);
+  } catch (error) {
+    console.error('LinkedIn OAuth callback error:', error.message);
+    const redirectUrl = `${config.clientUrl}/#/candidate/profile?error=${encodeURIComponent(error.message || 'Connection Failed')}`;
+    res.redirect(redirectUrl);
+  }
+};
+
+exports.linkedinStatus = (req, res) => {
+  const config = require('../config');
+  const hasId = !!config.linkedin.clientId && config.linkedin.clientId !== 'your-linkedin-client-id';
+  const hasSecret = !!config.linkedin.clientSecret && config.linkedin.clientSecret !== 'your-linkedin-client-secret';
+  res.json({
+    configured: hasId && hasSecret,
+    clientIdPresent: hasId,
+    clientSecretPresent: hasSecret,
+    callbackUrl: config.linkedin.redirectUri,
+    routesRegistered: true
+  });
 };
 
 exports.linkedinDisconnect = async (req, res) => {
   try {
+    const OAuthAccount = require('../models/OAuthAccount');
+    const LinkedInProfile = require('../models/LinkedInProfile');
+    
     req.user.linkedinConnected = false;
+    req.user.linkedinId = '';
+    req.user.linkedinName = '';
+    req.user.linkedinEmail = '';
+    req.user.linkedinHeadline = '';
+    req.user.linkedinProfilePicture = '';
+    req.user.linkedinProfileUrl = '';
+    req.user.linkedinAccessToken = '';
+    req.user.lastLinkedInSync = undefined;
     await req.user.save();
+
+    await LinkedInProfile.deleteOne({ user: req.user._id });
+    await OAuthAccount.deleteOne({ userId: req.user._id, provider: 'linkedin' });
+
     res.json({ success: true, message: 'LinkedIn disconnected' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.linkedinSync = async (req, res) => {
+  try {
+    const OAuthAccount = require('../models/OAuthAccount');
+    const LinkedInProfile = require('../models/LinkedInProfile');
+    const { decrypt } = require('../utils/crypto');
+    
+    // Retrieve decrypted access token from user model directly or fallback to OAuthAccount
+    let decryptedToken = '';
+    if (req.user.linkedinAccessToken) {
+      decryptedToken = decrypt(req.user.linkedinAccessToken);
+    } else {
+      const account = await OAuthAccount.findOne({ userId: req.user._id, provider: 'linkedin' });
+      if (!account) {
+        return res.status(400).json({ success: false, message: 'LinkedIn account not connected' });
+      }
+      decryptedToken = decrypt(account.accessToken);
+    }
+
+    const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+
+    const profileRes = await fetch('https://api.linkedin.com/v2/userinfo', {
+      headers: { 'Authorization': `Bearer ${decryptedToken}` }
+    });
+
+    if (!profileRes.ok) {
+      throw new Error('Failed to retrieve LinkedIn profile information.');
+    }
+
+    const profileData = await profileRes.json();
+
+    req.user.linkedinName = profileData.name || `${profileData.given_name || ''} ${profileData.family_name || ''}`.trim();
+    req.user.linkedinEmail = profileData.email || req.user.linkedinEmail;
+    req.user.linkedinHeadline = profileData.headline || req.user.linkedinHeadline || 'Software Engineer Candidate';
+    req.user.linkedinProfilePicture = profileData.picture || req.user.linkedinProfilePicture;
+    req.user.linkedinProfileUrl = profileData.profileUrl || req.user.linkedinProfileUrl;
+    req.user.lastLinkedInSync = new Date();
+    await req.user.save();
+
+    await LinkedInProfile.findOneAndUpdate(
+      { user: req.user._id },
+      {
+        user: req.user._id,
+        linkedinId: profileData.sub || req.user.linkedinId,
+        name: req.user.linkedinName,
+        email: req.user.linkedinEmail,
+        headline: req.user.linkedinHeadline,
+        profilePicture: req.user.linkedinProfilePicture,
+        profileUrl: req.user.linkedinProfileUrl,
+        lastSynced: new Date()
+      },
+      { upsert: true, new: true }
+    );
+
+    res.json({ success: true, user: req.user });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

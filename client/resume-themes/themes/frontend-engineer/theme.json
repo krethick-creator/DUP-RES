@@ -1,0 +1,55 @@
+{
+  "id": "17",
+  "key": "frontend-engineer",
+  "name": "Frontend Engineer",
+  "category": "Technology",
+  "description": "A professionally optimized Frontend Engineer layout matching modern recruitment standards.",
+  "atsScore": 95,
+  "bestFor": "Software Engineering Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Roboto",
+  "popularity": 740,
+  "downloads": 1872,
+  "favoritesCount": 278,
+  "companyRecommendations": [
+    "Google",
+    "Stripe",
+    "Meta"
+  ],
+  "Theme Name": "Frontend Engineer",
+  "Category": "Technology",
+  "Description": "A professionally optimized Frontend Engineer layout matching modern recruitment standards.",
+  "ATS Score": 95,
+  "Best For": "Software Engineering Roles",
+  "Company Recommendation": [
+    "Google",
+    "Stripe",
+    "Meta"
+  ],
+  "Primary Color": "#0F172A",
+  "Secondary Color": "#475569",
+  "Accent Color": "#2563EB",
+  "Fonts": [
+    "Roboto"
+  ],
+  "Layout": "single-column",
+  "Sidebar": "none",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

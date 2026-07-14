@@ -1,0 +1,22 @@
+{
+  "id": "41",
+  "key": "product-manager",
+  "name": "Product Manager",
+  "category": "Business",
+  "description": "A professionally optimized Product Manager layout matching modern recruitment standards.",
+  "atsScore": 90,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Roboto",
+  "popularity": 1100,
+  "downloads": 2880,
+  "favoritesCount": 470,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

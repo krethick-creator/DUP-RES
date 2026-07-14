@@ -1,0 +1,53 @@
+{
+  "id": "44",
+  "key": "internship",
+  "name": "Internship",
+  "category": "Student",
+  "description": "A professionally optimized Internship layout matching modern recruitment standards.",
+  "atsScore": 100,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Roboto",
+  "popularity": 1145,
+  "downloads": 3006,
+  "favoritesCount": 494,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Internship",
+  "Category": "Student",
+  "Description": "A professionally optimized Internship layout matching modern recruitment standards.",
+  "ATS Score": 100,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#064E3B",
+  "Secondary Color": "#111827",
+  "Accent Color": "#10B981",
+  "Fonts": [
+    "Roboto"
+  ],
+  "Layout": "two-column",
+  "Sidebar": "left",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

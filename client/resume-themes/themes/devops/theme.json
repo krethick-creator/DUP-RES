@@ -1,0 +1,53 @@
+{
+  "id": "34",
+  "key": "devops",
+  "name": "Devops",
+  "category": "Technology",
+  "description": "A professionally optimized Devops layout matching modern recruitment standards.",
+  "atsScore": 90,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Inter",
+  "popularity": 995,
+  "downloads": 2586,
+  "favoritesCount": 414,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Devops",
+  "Category": "Technology",
+  "Description": "A professionally optimized Devops layout matching modern recruitment standards.",
+  "ATS Score": 90,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#064E3B",
+  "Secondary Color": "#111827",
+  "Accent Color": "#10B981",
+  "Fonts": [
+    "Inter"
+  ],
+  "Layout": "two-column",
+  "Sidebar": "left",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

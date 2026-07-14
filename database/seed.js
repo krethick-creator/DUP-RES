@@ -7,6 +7,9 @@ const Application = require('../models/Application');
 const Notification = require('../models/Notification');
 const Settings = require('../models/Settings');
 const CareerRoadmap = require('../models/CareerRoadmap');
+const Organization = require('../models/Organization');
+const CandidatePipeline = require('../models/CandidatePipeline');
+const AuditLog = require('../models/AuditLog');
 const config = require('../config');
 
 const seed = async () => {
@@ -17,7 +20,9 @@ const seed = async () => {
     await Promise.all([
       User.deleteMany(), Company.deleteMany(), Job.deleteMany(),
       Application.deleteMany(), Notification.deleteMany(),
-      Settings.deleteMany(), CareerRoadmap.deleteMany()
+      Settings.deleteMany(), CareerRoadmap.deleteMany(),
+      Organization.deleteMany(), CandidatePipeline.deleteMany(),
+      AuditLog.deleteMany()
     ]);
 
     const company = await Company.create({
@@ -148,6 +153,65 @@ const seed = async () => {
       { key: 'EMAIL_FROM', value: 'noreply@recruitment-platform.com', category: 'email', isSecret: false }
     ];
     await Settings.insertMany(defaultSettings);
+
+    // Seed Organizations
+    const seededOrg = await Organization.create({
+      name: 'Google Enterprise AI',
+      description: 'Hiring workspace for Technical and Product teams',
+      owner: recruiter._id,
+      departments: [
+        { name: 'Engineering', description: 'Development division', manager: recruiter._id, members: [recruiter._id] },
+        { name: 'AI/ML', description: 'Artificial Intelligence division', manager: recruiter._id, members: [recruiter._id] }
+      ],
+      teams: [
+        { name: 'Backend API', departmentName: 'Engineering', description: 'REST APIs & platform integration', members: [recruiter._id] },
+        { name: 'AI Department', departmentName: 'AI/ML', description: 'Deep Learning models team', members: [recruiter._id] }
+      ],
+      members: [
+        { user: recruiter._id, role: 'owner', department: 'AI/ML', team: 'AI Department', permissions: ['all'] }
+      ]
+    });
+
+    // Seed CandidatePipeline for Candidate
+    const application = await Application.findOne({ candidate: candidate._id });
+    if (application) {
+      await CandidatePipeline.create({
+        application: application._id,
+        organization: seededOrg._id,
+        stage: 'Applied',
+        priority: 'high',
+        assignedMember: recruiter._id,
+        tasks: [
+          { title: 'Resume Screen Complete', completed: true },
+          { title: 'Schedule Tech Interview', completed: false }
+        ],
+        comments: [
+          { author: recruiter._id, content: 'Candidate Alex Chen matches the requirement stack. Let us assign a coding interview.' }
+        ],
+        activityHistory: [
+          { user: recruiter._id, action: 'create_pipeline', details: 'Initialized pipeline candidate Alex Chen' }
+        ],
+        aiDecision: {
+          bestDepartment: 'AI/ML',
+          bestTeam: 'AI Department',
+          bestRecruiter: recruiter._id,
+          bestTechnicalInterviewer: recruiter._id,
+          bestInterviewSequence: ['AI Screening', 'Resume Review', 'Technical Interview', 'Manager Interview'],
+          confidenceScore: 92,
+          reasoning: 'Alex has Python, TensorFlow, and AWS listed. Mapped to AI/ML division.'
+        },
+        aiSummary: {
+          candidateSummary: 'Alex Chen is a solid mid-level full stack engineer with experience in React and machine learning integrations.',
+          interviewSummary: 'Candidate did excellent in coding assessment.',
+          hiringRecommendation: 'Strong Hire',
+          offerRecommendation: 'Base Salary $150,000 + Stock options',
+          riskAssessment: 'Low Risk',
+          skillGapAnalysis: ['Docker', 'Kubernetes'],
+          trainingSuggestions: ['Complete Kubernetes Certified Admin (CKA) course'],
+          confidence: 94
+        }
+      });
+    }
 
     console.log('\n✅ Seed completed!\n');
     console.log('Demo Accounts:');

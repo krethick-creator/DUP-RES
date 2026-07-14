@@ -1,0 +1,53 @@
+{
+  "id": "28",
+  "key": "data-scientist",
+  "name": "Data Scientist",
+  "category": "Technology",
+  "description": "A professionally optimized Data Scientist layout matching modern recruitment standards.",
+  "atsScore": 95,
+  "bestFor": "Software Engineering Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Inter",
+  "popularity": 905,
+  "downloads": 2334,
+  "favoritesCount": 366,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Data Scientist",
+  "Category": "Technology",
+  "Description": "A professionally optimized Data Scientist layout matching modern recruitment standards.",
+  "ATS Score": 95,
+  "Best For": "Software Engineering Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#064E3B",
+  "Secondary Color": "#111827",
+  "Accent Color": "#10B981",
+  "Fonts": [
+    "Inter"
+  ],
+  "Layout": "two-column",
+  "Sidebar": "left",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

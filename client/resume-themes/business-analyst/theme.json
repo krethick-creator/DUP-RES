@@ -1,0 +1,22 @@
+{
+  "id": "42",
+  "key": "business-analyst",
+  "name": "Business Analyst",
+  "category": "Business",
+  "description": "A professionally optimized Business Analyst layout matching modern recruitment standards.",
+  "atsScore": 91,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 1115,
+  "downloads": 2922,
+  "favoritesCount": 478,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ]
+}

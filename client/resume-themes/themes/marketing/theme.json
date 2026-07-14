@@ -1,0 +1,53 @@
+{
+  "id": "38",
+  "key": "marketing",
+  "name": "Marketing",
+  "category": "Creative",
+  "description": "A professionally optimized Marketing layout matching modern recruitment standards.",
+  "atsScore": 94,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Roboto",
+  "popularity": 1055,
+  "downloads": 2754,
+  "favoritesCount": 446,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Marketing",
+  "Category": "Creative",
+  "Description": "A professionally optimized Marketing layout matching modern recruitment standards.",
+  "ATS Score": 94,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#064E3B",
+  "Secondary Color": "#111827",
+  "Accent Color": "#10B981",
+  "Fonts": [
+    "Roboto"
+  ],
+  "Layout": "two-column",
+  "Sidebar": "left",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

@@ -1,0 +1,55 @@
+{
+  "id": "16",
+  "key": "backend-engineer",
+  "name": "Backend Engineer",
+  "category": "Technology",
+  "description": "A professionally optimized Backend Engineer layout matching modern recruitment standards.",
+  "atsScore": 94,
+  "bestFor": "Software Engineering Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Inter",
+  "popularity": 725,
+  "downloads": 1830,
+  "favoritesCount": 270,
+  "companyRecommendations": [
+    "Google",
+    "Stripe",
+    "Meta"
+  ],
+  "Theme Name": "Backend Engineer",
+  "Category": "Technology",
+  "Description": "A professionally optimized Backend Engineer layout matching modern recruitment standards.",
+  "ATS Score": 94,
+  "Best For": "Software Engineering Roles",
+  "Company Recommendation": [
+    "Google",
+    "Stripe",
+    "Meta"
+  ],
+  "Primary Color": "#064E3B",
+  "Secondary Color": "#111827",
+  "Accent Color": "#10B981",
+  "Fonts": [
+    "Inter"
+  ],
+  "Layout": "two-column",
+  "Sidebar": "left",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}
