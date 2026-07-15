@@ -104,7 +104,13 @@ exports.verifyEmail = async (req, res) => {
     const user = await User.findOne({ verificationToken: req.params.token });
     if (!user) return res.status(400).json({ success: false, message: 'Invalid token' });
     user.isVerified = true;
+    user.emailVerified = true;
+    user.verificationMethod = 'email';
+    user.emailVerifiedAt = new Date();
     user.verificationToken = undefined;
+    if (!user.communicationEmail) {
+      user.communicationEmail = user.email;
+    }
     await user.save();
     res.json({ success: true, message: 'Email verified' });
   } catch (error) {
@@ -116,6 +122,25 @@ exports.updateProfile = async (req, res) => {
   try {
     const fields = ['name', 'phone', 'location', 'bio', 'skills', 'darkMode', 'linkedinProfileUrl'];
     fields.forEach((f) => { if (req.body[f] !== undefined) req.user[f] = req.body[f]; });
+
+    if (req.body.email && req.body.email.toLowerCase() !== req.user.email) {
+      const emailExists = await User.findOne({ email: req.body.email.toLowerCase() });
+      if (emailExists) return res.status(400).json({ success: false, message: 'Email already in use' });
+
+      const verificationToken = generateVerificationToken();
+      req.user.email = req.body.email.toLowerCase();
+      req.user.isVerified = false;
+      req.user.emailVerified = false;
+      req.user.verificationToken = verificationToken;
+      req.user.verificationMethod = 'email';
+
+      await sendEmail({
+        to: req.user.email,
+        subject: 'Verify your email change',
+        html: `<p>Click to verify: <a href="${req.protocol}://${req.get('host')}/api/auth/verify/${verificationToken}">Verify Email</a></p>`
+      });
+    }
+
     await req.user.save();
     res.json({ success: true, user: req.user });
   } catch (error) {
@@ -241,7 +266,7 @@ if (!accessToken) {
 };
 
 exports.googleAuth = (req, res) => {
-  const { token } = req.query;
+  const { token, role } = req.query;
   const config = require('../config');
   const clientId = config.google.clientId;
   
@@ -251,7 +276,15 @@ exports.googleAuth = (req, res) => {
   
   const redirectUri = config.google.redirectUri;
   const scope = encodeURIComponent('openid email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.modify');
-  const googleUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${encodeURIComponent(token)}&access_type=offline&prompt=consent`;
+  
+  let state = '';
+  if (token) {
+    state = token;
+  } else {
+    state = `login:${role || 'candidate'}`;
+  }
+  
+  const googleUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${encodeURIComponent(state)}&access_type=offline&prompt=consent`;
   res.redirect(googleUrl);
 };
 
@@ -259,19 +292,11 @@ exports.googleCallback = async (req, res) => {
   const { code, state } = req.query;
   const config = require('../config');
   const OAuthAccount = require('../models/OAuthAccount');
+  const User = require('../models/User');
   const { encrypt } = require('../utils/crypto');
   const jwt = require('jsonwebtoken');
 
   try {
-    const decoded = jwt.verify(state, config.jwt.secret);
-    const user = await User.findById(decoded.id);
-    if (!user) return res.status(404).send('User not found');
-    
-    // REDESIGN REQUIREMENT: Only recruiters may connect Gmail/Google OAuth
-    if (user.role !== 'recruiter') {
-      return res.status(403).send('Only recruiters can connect Gmail accounts.');
-    }
-
     const { google } = require('googleapis');
     const oauth2Client = new google.auth.OAuth2(
       config.google.clientId,
@@ -286,7 +311,51 @@ exports.googleCallback = async (req, res) => {
     const userInfo = await oauth2.userinfo.get();
     const profileData = userInfo.data;
 
-    // Save user profile details to User model
+    let user;
+    let isLoginFlow = false;
+    let targetRole = 'candidate';
+
+    if (state && state.startsWith('login:')) {
+      isLoginFlow = true;
+      targetRole = state.split(':')[1] || 'candidate';
+
+      user = await User.findOne({
+        $or: [
+          { googleId: profileData.id },
+          { googleEmail: profileData.email },
+          { email: profileData.email }
+        ]
+      });
+
+      if (!user) {
+        const crypto = require('crypto');
+        const randomPassword = crypto.randomBytes(16).toString('hex');
+        user = new User({
+          name: profileData.name || 'Google User',
+          email: profileData.email,
+          password: randomPassword,
+          role: targetRole
+        });
+      }
+    } else {
+      const decoded = jwt.verify(state, config.jwt.secret);
+      user = await User.findById(decoded.id);
+      if (!user) return res.status(404).send('User not found');
+      
+      if (user.role !== 'recruiter') {
+        return res.status(403).send('Only recruiters can connect Gmail accounts.');
+      }
+    }
+
+    user.emailVerified = true;
+    user.isVerified = true;
+    user.verificationMethod = 'google';
+    user.emailVerifiedAt = new Date();
+    user.verifiedGoogleEmail = profileData.email;
+    if (!user.communicationEmail) {
+      user.communicationEmail = profileData.email;
+    }
+
     user.googleId = profileData.id;
     user.googleEmail = profileData.email;
     user.googleName = profileData.name;
@@ -295,7 +364,6 @@ exports.googleCallback = async (req, res) => {
     user.lastGoogleSync = new Date();
     await user.save();
 
-    // Store encrypted tokens in OAuthAccount collection
     await OAuthAccount.deleteOne({ userId: user._id, provider: 'google' });
     
     await OAuthAccount.create({
@@ -309,11 +377,16 @@ exports.googleCallback = async (req, res) => {
       lastSynced: new Date()
     });
 
-    res.redirect(`${config.clientUrl}/#/recruiter/email-center`);
+    if (isLoginFlow) {
+      const token = jwt.sign({ id: user._id }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
+      res.redirect(`${config.clientUrl}/#/login?token=${token}&role=${user.role}`);
+    } else {
+      res.redirect(`${config.clientUrl}/#/recruiter/email-center`);
+    }
   } catch (error) {
     console.error('Google OAuth callback error:', error);
     const config = require('../config');
-    const redirectUrl = `${config.clientUrl}/#/recruiter/email-center?error=${encodeURIComponent(error.message || 'Connection Failed')}`;
+    const redirectUrl = `${config.clientUrl}/#/${state && state.startsWith('login:') ? 'login' : 'recruiter/email-center'}?error=${encodeURIComponent(error.message || 'Connection Failed')}`;
     res.redirect(redirectUrl);
   }
 };
@@ -765,3 +838,118 @@ exports.githubDisconnect = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+exports.addCompanyEmail = async (req, res) => {
+  try {
+    if (req.user.role !== 'recruiter') {
+      return res.status(403).json({ success: false, message: 'Only recruiters can manage company emails' });
+    }
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+
+    const exists = req.user.companyEmails.find(e => e.email === email.toLowerCase());
+    if (exists) return res.status(400).json({ success: false, message: 'Email already added' });
+
+    const verificationToken = generateVerificationToken();
+    req.user.companyEmails.push({
+      email: email.toLowerCase(),
+      verified: false,
+      verificationToken,
+      isDefault: req.user.companyEmails.length === 0
+    });
+    await req.user.save();
+
+    await sendEmail({
+      to: email,
+      subject: 'Verify your company email',
+      html: `<p>Click to verify your company email: <a href="${req.protocol}://${req.get('host')}/api/auth/recruiter/verify-company-email/${verificationToken}">Verify Company Email</a></p>`
+    });
+
+    res.json({ success: true, user: req.user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.verifyCompanyEmail = async (req, res) => {
+  try {
+    const user = await User.findOne({ 'companyEmails.verificationToken': req.params.token });
+    if (!user) return res.status(400).send('<h1>Verification Failed</h1><p>Invalid or expired verification token.</p>');
+
+    const companyEmail = user.companyEmails.find(e => e.verificationToken === req.params.token);
+    if (companyEmail) {
+      companyEmail.verified = true;
+      companyEmail.verificationToken = undefined;
+      await user.save();
+    }
+
+    res.send(`
+      <html>
+        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+          <h1 style="color: #10B981;">✓ Company Email Verified Successfully!</h1>
+          <p>You can close this window and return to your dashboard.</p>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+};
+
+exports.setPrimaryCompanyEmail = async (req, res) => {
+  try {
+    if (req.user.role !== 'recruiter') {
+      return res.status(403).json({ success: false, message: 'Only recruiters can manage company emails' });
+    }
+    const { email } = req.body;
+    const target = req.user.companyEmails.find(e => e.email === email.toLowerCase());
+    if (!target) return res.status(404).json({ success: false, message: 'Email not found' });
+    if (!target.verified) return res.status(400).json({ success: false, message: 'Only verified emails can be set as default' });
+
+    req.user.companyEmails.forEach(e => {
+      e.isDefault = (e.email === email.toLowerCase());
+    });
+    await req.user.save();
+    res.json({ success: true, user: req.user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.deleteCompanyEmail = async (req, res) => {
+  try {
+    if (req.user.role !== 'recruiter') {
+      return res.status(403).json({ success: false, message: 'Only recruiters can manage company emails' });
+    }
+    const { email } = req.body;
+    req.user.companyEmails = req.user.companyEmails.filter(e => e.email !== email.toLowerCase());
+    await req.user.save();
+    res.json({ success: true, user: req.user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.updateCommunicationEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+
+    const targetEmail = email.trim().toLowerCase();
+
+    const isGoogle = req.user.verifiedGoogleEmail && (targetEmail === req.user.verifiedGoogleEmail.toLowerCase());
+    const isPrimary = req.user.emailVerified && (targetEmail === req.user.email.toLowerCase());
+    const isCompany = (req.user.companyEmails || []).some(e => e.email === targetEmail && e.verified);
+
+    if (!isGoogle && !isPrimary && !isCompany) {
+      return res.status(400).json({ success: false, message: 'Only verified emails can be set as communication email' });
+    }
+
+    req.user.communicationEmail = targetEmail;
+    await req.user.save();
+    res.json({ success: true, user: req.user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

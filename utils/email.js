@@ -15,14 +15,16 @@ const getTransporter = () => {
   return transporter;
 };
 
-const sendEmail = async ({ to, subject, html }) => {
+const sendEmail = async ({ to, subject, html, from }) => {
   try {
+    const sender = from || config.smtp.from;
     if (!config.smtp.user) {
-      console.log(`[Email Placeholder] To: ${to}, Subject: ${subject}`);
+      console.log(`[Email Placeholder] From: ${sender}, To: ${to}, Subject: ${subject}`);
       return { success: true, placeholder: true };
     }
     await getTransporter().sendMail({
-      from: config.smtp.from,
+      from: sender,
+      replyTo: sender,
       to,
       subject,
       html

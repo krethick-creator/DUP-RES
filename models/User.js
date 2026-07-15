@@ -40,6 +40,16 @@ const userSchema = new mongoose.Schema({
   googleName: { type: String, default: '' },
   googlePicture: { type: String, default: '' },
   lastGoogleSync: { type: Date },
+  emailVerifiedAt: { type: Date },
+  verificationMethod: { type: String, enum: ['google', 'email'], default: 'email' },
+  verifiedGoogleEmail: { type: String, default: '' },
+  companyEmails: [{
+    email: { type: String, lowercase: true, trim: true },
+    verified: { type: Boolean, default: false },
+    verificationToken: { type: String },
+    isDefault: { type: Boolean, default: false }
+  }],
+  communicationEmail: { type: String, lowercase: true, trim: true, default: '' },
   skills: [{ type: String }],
   experience: { type: Number, default: 0 },
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company' },

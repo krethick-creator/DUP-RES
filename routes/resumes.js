@@ -7,6 +7,7 @@ const router = express.Router();
 
 router.use(protect, authorize('candidate'));
 
+router.post('/generate-ai', resume.generateAIResume);
 router.post('/upload', upload.single('resume'), resume.uploadResume);
 router.get('/', resume.getResumes);
 router.get('/themes', resume.getThemes);
@@ -21,6 +22,7 @@ router.post('/version/restore', resume.restoreVersionDirect);
 
 router.post('/:resumeId/theme/apply', resume.applyTheme);
 router.post('/:resumeId/theme/favorite', resume.favoriteTheme);
+router.put('/:resumeId', resume.updateResumeContent);
 router.post('/:resumeId/theme/customize', resume.customizeTheme);
 router.post('/:resumeId/theme/generate', resume.generateAITheme);
 router.post('/:resumeId/optimize', resume.optimizeResume);
@@ -28,6 +30,7 @@ router.get('/:resumeId/versions', resume.getVersions);
 router.post('/:resumeId/version/restore', resume.restoreVersion);
 router.get('/:id', resume.getResume);
 router.post('/:id/simulate', resume.simulateResume);
+router.post('/:id/advanced-simulate', resume.advancedSimulateResume);
 router.post('/:id/dynamic', resume.dynamicResume);
 router.get('/:id/improvement', resume.improvementReport);
 router.get('/:id/timeline', resume.getTimeline);

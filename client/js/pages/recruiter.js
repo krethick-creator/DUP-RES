@@ -150,6 +150,16 @@ const RecruiterDashboard = {
   },
 
   renderCreateJob() {
+    const user = this.user || {};
+    const verifiedEmails = [];
+    if (user.verifiedGoogleEmail) verifiedEmails.push({ email: user.verifiedGoogleEmail, label: 'Google Email (Verified)' });
+    if (user.emailVerified) verifiedEmails.push({ email: user.email, label: 'Primary Account Email (Verified)' });
+    (user.companyEmails || []).forEach(e => {
+      if (e.verified) verifiedEmails.push({ email: e.email, label: `Company Email: ${e.email} (Verified)` });
+    });
+
+    const defaultEmail = user.verifiedGoogleEmail || (verifiedEmails[0] ? verifiedEmails[0].email : '');
+
     return `
       <div class="page-header"><h2>AI Job Creation</h2><p class="text-secondary">Generate job postings with AI assistance</p></div>
       <div class="grid grid-2 gap-6">
@@ -173,14 +183,35 @@ const RecruiterDashboard = {
                 <select class="form-select" name="type"><option value="full-time">Full-time</option><option value="contract">Contract</option><option value="internship">Internship</option></select>
               </div>
             </div>
-            <button type="submit" class="btn btn-primary">Create Job</button>
+
+            <div class="form-group mt-4" style="border-top: 1px solid var(--border-color); padding-top: 12px;">
+              <label class="form-label">Recruiter Contact Email</label>
+              ${verifiedEmails.length ? `
+                <select class="form-select" name="recruiterContactEmail" id="job-contact-email-select">
+                  ${verifiedEmails.map(v => `<option value="${v.email}" ${v.email === defaultEmail ? 'selected' : ''}>${v.label}</option>`).join('')}
+                </select>
+                <div class="text-secondary mt-1" style="font-size:10px; line-height: 1.4;">
+                  This email will be used for:<br>
+                  • Candidate applications<br>
+                  • Notifications<br>
+                  • Interview invitations<br>
+                  • Candidate communication
+                </div>
+              ` : `
+                <div class="text-danger font-semibold text-xs mb-2">
+                  ⚠ No verified emails available. You must verify your email or add a verified company email under Settings before you can post a job.
+                </div>
+                <input class="form-input text-danger" value="Unverified - Posting Disabled" disabled>
+              `}
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-4" ${!verifiedEmails.length ? 'disabled' : ''}>Create Job</button>
           </form>
         </div>
       </div>
       <div class="card mt-6 hidden" id="ai-job-preview"></div>`;
   },
-
-  async renderCandidates() {
+async renderCandidates() {
     let apps = [];
     try { const data = await API.getApplications(); apps = data.applications || []; } catch (_) { }
 
@@ -507,26 +538,135 @@ const RecruiterDashboard = {
   },
 
   renderSettings() {
-    return `
-      <div class="page-header"><h2>Settings</h2></div>
-      <div class="card">
-        <h3 class="mb-4">Recruiter Preferences</h3>
-        <div class="flex items-center justify-between mb-4">
-          <div><strong>Dark Mode</strong><p class="text-sm text-muted">Toggle dark theme</p></div>
-          <div class="toggle-switch" id="settings-dark-toggle"></div>
-        </div>
-        <div class="flex items-center justify-between mb-4">
-          <div><strong>Auto-screening</strong><p class="text-sm text-muted">Automatically screen new applications</p></div>
-          <div class="toggle-switch active"></div>
-        </div>
-        <div class="flex items-center justify-between mb-4">
-          <div><strong>Email Alerts</strong><p class="text-sm text-muted">New application notifications</p></div>
-          <div class="toggle-switch active"></div>
-        </div>
-      </div>`;
-  },
+    const user = this.user || {};
+    const companyName = user.companyName || 'TalentAI Inc';
+    
+    const verifiedEmails = [];
+    if (user.verifiedGoogleEmail) verifiedEmails.push(user.verifiedGoogleEmail);
+    if (user.emailVerified) verifiedEmails.push(user.email);
+    (user.companyEmails || []).forEach(e => {
+      if (e.verified) verifiedEmails.push(e.email);
+    });
 
-  bind() {
+    const activeCommEmail = user.communicationEmail || user.email || '';
+    const isCommEmailVerified = verifiedEmails.includes(activeCommEmail);
+
+    return `
+      <div class="page-header"><h2>Settings</h2><p class="text-secondary">Manage profile connection, company emails, and active communications.</p></div>
+      
+      <div class="grid grid-2 gap-6 animate-fade-in">
+        <div>
+          <!-- Recruiter Preferences -->
+          <div class="card mb-6">
+            <h3 class="mb-4">Recruiter Preferences</h3>
+            <div class="flex items-center justify-between mb-4">
+              <div><strong>Dark Mode</strong><p class="text-sm text-muted">Toggle dark theme</p></div>
+              <div class="toggle-switch" id="settings-dark-toggle"></div>
+            </div>
+          </div>
+
+          <!-- Recruiter Profile -->
+          <div class="card mb-6">
+            <h3 class="mb-4">Recruiter Profile</h3>
+            <div style="font-size: 13px; line-height: 1.8;" class="text-secondary">
+              <div><strong>Recruiter Name:</strong> ${user.name || 'N/A'}</div>
+              <div><strong>Company Name:</strong> ${companyName}</div>
+              <div><strong>Registered Email:</strong> ${user.email || 'N/A'}
+                ${user.emailVerified ? `
+                  <span class="badge badge-success ml-2">✅ ${user.verificationMethod === 'google' ? 'Google Verified' : 'Verified'}</span>
+                ` : `
+                  <span class="badge badge-warning ml-2">🟡 Verification Required</span>
+                `}
+              </div>
+              ${user.emailVerified ? `<div><strong>Verification Method:</strong> ${user.verificationMethod === 'google' ? 'Google OAuth' : 'Email Link'}</div>` : ''}
+              ${user.verifiedGoogleEmail ? `<div><strong>Verified Google Account:</strong> ${user.verifiedGoogleEmail} <span class="badge badge-success">✅ Google Verified</span></div>` : ''}
+            </div>
+          </div>
+
+          <!-- Communication Email Settings -->
+          <div class="card">
+            <h3 class="mb-2">Communication Email</h3>
+            <p class="text-xs text-muted mb-4">This email is used to receive applications, send interview invitations, receive platform notifications, and send recruiter emails.</p>
+            
+            <div class="p-3 rounded mb-4 text-xs" style="background: rgba(37,99,235,0.04); border: 1px solid var(--border-color);">
+              <div><strong>Active Communication Email:</strong> <span class="font-bold text-primary">${activeCommEmail || 'None Set'}</span></div>
+              <div class="mt-1">
+                <strong>Status:</strong> 
+                ${isCommEmailVerified ? '<span class="badge badge-success">✅ Verified</span>' : '<span class="badge badge-warning">🟡 Verification Required</span>'}
+              </div>
+            </div>
+
+            <div class="form-group text-xs">
+              <label class="form-label font-semibold">Change Communication Email</label>
+              ${verifiedEmails.length ? `
+                <select class="form-select mb-2" id="comm-email-select">
+                  ${verifiedEmails.map(email => `<option value="${email}" ${email === activeCommEmail ? 'selected' : ''}>${email}</option>`).join('')}
+                </select>
+                <button class="btn btn-primary btn-sm" id="btn-save-comm-email">Set Active Email</button>
+              ` : `
+                <p class="text-warning font-semibold">⚠ No verified emails available. Please connect Google or verify a company email first.</p>
+              `}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <!-- Company Emails Manager -->
+          <div class="card h-full" style="display:flex; flex-direction:column; justify-content:space-between; min-height:480px;">
+            <div>
+              <h3 class="mb-2">Company Emails</h3>
+              <p class="text-xs text-muted mb-4">Manage multiple authorized company emails for posting job listings.</p>
+              
+              <div class="company-emails-list flex flex-col gap-3 mb-6">
+                <div class="flex justify-between items-center p-3 rounded" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
+                  <div class="text-xs">
+                    <strong>${user.email}</strong> <span class="badge badge-primary ml-1">Primary</span>
+                    <div class="text-xxs text-muted mt-1">
+                      ${user.emailVerified ? '✅ Verified' : '🟡 Verification Required'}
+                    </div>
+                  </div>
+                </div>
+
+                ${user.verifiedGoogleEmail ? `
+                  <div class="flex justify-between items-center p-3 rounded" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
+                    <div class="text-xs">
+                      <strong>${user.verifiedGoogleEmail}</strong> <span class="badge badge-success ml-1">Google</span>
+                      <div class="text-xxs text-muted mt-1">✅ Verified</div>
+                    </div>
+                  </div>
+                ` : ''}
+
+                ${(user.companyEmails || []).map(e => `
+                  <div class="flex justify-between items-center p-3 rounded" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
+                    <div class="text-xs">
+                      <strong>${e.email}</strong>
+                      ${e.isDefault ? '<span class="badge badge-primary ml-1">Default</span>' : ''}
+                      <div class="text-xxs text-muted mt-1">
+                        ${e.verified ? '✅ Verified' : '🟡 Verification Required / Pending'}
+                      </div>
+                    </div>
+                    <div class="flex gap-2">
+                      ${(e.verified && !e.isDefault) ? `<button class="btn btn-ghost btn-xxs set-default-email-btn" data-email="${e.email}">Set Default</button>` : ''}
+                      <button class="btn btn-ghost btn-xxs text-danger delete-email-btn" data-email="${e.email}">Delete</button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <form id="add-company-email-form" style="border-top:1px solid var(--border-color); padding-top:16px;">
+              <div class="form-group mb-2">
+                <label class="form-label text-xs">Add Company Email</label>
+                <input type="email" class="form-input text-xs" name="email" required placeholder="recruitment@mycompany.com">
+              </div>
+              <button type="submit" class="btn btn-secondary btn-sm w-full">Add Email</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+bind() {
     UI.bindDashboardEvents((section) => {
       window.location.hash = `#/recruiter/${section}`;
     });
@@ -630,13 +770,81 @@ const RecruiterDashboard = {
           }
         });
       }
+
+      // Add company email form submit
+      document.getElementById('add-company-email-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = new FormData(e.target);
+        try {
+          const res = await API.post('/auth/recruiter/company-email', { email: form.get('email') });
+          UI.toast('Verification email sent to company address!', 'success');
+          API.setUser(res.user);
+          this.user = res.user;
+          this.render('settings').then(html => {
+            document.getElementById('app').innerHTML = html;
+            this.bind();
+          });
+        } catch (err) { UI.toast(err.message, 'error'); }
+      });
+
+      // Set default company email
+      document.querySelectorAll('.set-default-email-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const email = btn.dataset.email;
+          try {
+            const res = await API.post('/auth/recruiter/company-email/default', { email });
+            UI.toast('Default company email updated!', 'success');
+            API.setUser(res.user);
+            this.user = res.user;
+            this.render('settings').then(html => {
+              document.getElementById('app').innerHTML = html;
+              this.bind();
+            });
+          } catch (err) { UI.toast(err.message, 'error'); }
+        });
+      });
+
+      // Delete company email
+      document.querySelectorAll('.delete-email-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const email = btn.dataset.email;
+          try {
+            const res = await API.post('/auth/recruiter/company-email/delete', { email });
+            UI.toast('Company email deleted!', 'success');
+            API.setUser(res.user);
+            this.user = res.user;
+            this.render('settings').then(html => {
+              document.getElementById('app').innerHTML = html;
+              this.bind();
+            });
+          } catch (err) { UI.toast(err.message, 'error'); }
+        });
+      });
+
+      // Save Communication Email select
+      document.getElementById('btn-save-comm-email')?.addEventListener('click', async () => {
+        const email = document.getElementById('comm-email-select')?.value;
+        if (!email) return;
+        try {
+          const res = await API.post('/auth/recruiter/communication-email', { email });
+          UI.toast('Communication email updated!', 'success');
+          API.setUser(res.user);
+          this.user = res.user;
+          this.render('settings').then(html => {
+            document.getElementById('app').innerHTML = html;
+            this.bind();
+          });
+        } catch (err) { UI.toast(err.message, 'error'); }
+      });
     }
 
     // Create job
     document.getElementById('ai-generate-job')?.addEventListener('click', async () => {
       const prompt = document.getElementById('ai-job-prompt')?.value;
       try {
-        const data = await API.aiCreateJob({ prompt });
+        const contactSelect = document.getElementById('job-contact-email-select');
+        const recruiterContactEmail = contactSelect ? contactSelect.value : '';
+        const data = await API.aiCreateJob({ prompt, recruiterContactEmail });
         const preview = document.getElementById('ai-job-preview');
         preview.classList.remove('hidden');
         preview.innerHTML = `<h3 class="mb-4">AI Generated Job</h3><pre style="white-space:pre-wrap">${JSON.stringify(data.job, null, 2)}</pre>`;

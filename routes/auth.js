@@ -38,6 +38,13 @@ router.get('/google/callback', auth.googleCallback);
 router.get('/google/status', auth.googleStatus);
 router.post('/google/disconnect', protect, auth.googleDisconnect);
 
+// Recruiter Company Emails
+router.post('/recruiter/company-email', protect, auth.addCompanyEmail);
+router.get('/recruiter/verify-company-email/:token', auth.verifyCompanyEmail);
+router.post('/recruiter/company-email/default', protect, auth.setPrimaryCompanyEmail);
+router.post('/recruiter/company-email/delete', protect, auth.deleteCompanyEmail);
+router.post('/recruiter/communication-email', protect, auth.updateCommunicationEmail);
+
 // Recruiter Email Center Routes
 router.post('/google/send', protect, auth.recruiterSendEmail);
 router.post('/google/reply', protect, auth.recruiterReplyEmail);

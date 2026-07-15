@@ -65,10 +65,13 @@ const API = {
   updateProfile: (data) => API.put('/auth/profile', data),
   forgotPassword: (email) => API.post('/auth/forgot-password', { email }),
 
-  // Resumes
+   // Resumes
   uploadResume: (formData) => API.post('/resumes/upload', formData),
   getResumes: () => API.get('/resumes'),
+  updateResumeContent: (id, data) => API.put(`/resumes/${id}`, data),
+  generateAIResume: () => API.post('/resumes/generate-ai', {}),
   simulateResume: (id, scenarios) => API.post(`/resumes/${id}/simulate`, { scenarios }),
+  advancedSimulateResume: (id, data) => API.post(`/resumes/${id}/advanced-simulate`, data),
   getImprovementReport: (id) => API.get(`/resumes/${id}/improvement`),
   getResumeTimeline: (id) => API.get(`/resumes/${id}/timeline`),
 

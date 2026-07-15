@@ -17,6 +17,7 @@ const jobSchema = new mongoose.Schema({
   aiGenerated: { type: Boolean, default: false },
   applicationsCount: { type: Number, default: 0 },
   viewsCount: { type: Number, default: 0 },
+  recruiterContactEmail: { type: String, trim: true },
   deadline: Date
 }, { timestamps: true });
 

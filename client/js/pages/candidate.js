@@ -7,14 +7,22 @@ const CandidateDashboard = {
       title: 'Main', items: [
         { id: 'overview', icon: '📊', label: 'Overview' },
         { id: 'profile', icon: '👤', label: 'Profile' },
-        { id: 'resume', icon: '📄', label: 'Resume' },
-        { id: 'resume-themes', icon: '🎨', label: 'Resume Themes' },
         { id: 'applications', icon: '📋', label: 'Applications' }
       ]
     },
     {
+      title: 'AI Resume', items: [
+        { id: 'resume-builder', icon: '🛠️', label: 'Resume Builder' },
+        { id: 'resume', icon: '📄', label: 'Upload Resume' },
+        { id: 'resume-simulation', icon: '🎯', label: 'Resume Simulation' },
+        { id: 'resume-screening', icon: '🔍', label: 'Resume Screening' },
+        { id: 'resume-improvement', icon: '📈', label: 'Resume Improvement' },
+        { id: 'resume-matching', icon: '🤝', label: 'Resume Matching' },
+        { id: 'dynamic-resume', icon: '✨', label: 'Dynamic Resume' }
+      ]
+    },
+    {
       title: 'AI Tools', items: [
-        { id: 'resume-ai', icon: '🤖', label: 'Resume AI' },
         { id: 'assessments', icon: '💻', label: 'AI Project Workspace' },
         { id: 'interview', icon: '🎤', label: 'Interview Prep' },
         { id: 'ai-assistant', icon: '✨', label: 'AI Assistant' }
@@ -71,7 +79,12 @@ const CandidateDashboard = {
       profile: () => this.renderProfile(),
       resume: () => this.renderResume(),
       applications: () => this.renderApplications(),
-      'resume-ai': () => this.renderResumeAI(),
+      'resume-builder': () => this.renderResumeBuilder(),
+      'resume-simulation': () => this.renderResumeSimulationPage(),
+      'resume-screening': () => this.renderResumeScreeningPage(),
+      'resume-improvement': () => this.renderResumeImprovementPage(),
+      'resume-matching': () => this.renderResumeMatchingPage(),
+      'dynamic-resume': () => this.renderDynamicResumePage(),
       assessments: () => this.renderAssessments(),
       interview: () => this.renderInterview(),
       'ai-assistant': () => this.renderAIAssistant(),
@@ -83,8 +96,7 @@ const CandidateDashboard = {
       github: () => this.renderGitHub(),
       jobs: () => this.renderJobs(),
       notifications: () => this.renderNotifications(),
-      settings: () => this.renderSettings(),
-      'resume-themes': () => this.renderResumeThemes()
+      settings: () => this.renderSettings()
     };
     return (renderers[section] || renderers.overview)();
   },
@@ -275,13 +287,24 @@ const CandidateDashboard = {
             </div>
 
             <!-- Candidate Email Status -->
-            <div class="flex justify-between items-center p-3 rounded" style="background:var(--bg-secondary); border: 1px solid var(--border-color)">
+            <div class="flex justify-between items-center p-4 rounded" style="background:var(--bg-secondary); border: 1px solid var(--border-color)">
               <div class="flex items-center gap-3">
                 ${UI.getIcon('📧', 'candidate', '28px')}
                 <div>
                   <strong>Email Address</strong>
-                  <div class="text-sm text-secondary">${this.user?.email || ''}</div>
-                  <div class="text-xs text-muted">${this.user?.emailVerified || this.user?.isVerified ? '✅ Email Verified' : '❌ Email Not Verified'}</div>
+                  <div class="text-sm text-secondary mb-1">${this.user?.email || ''}</div>
+                  <div class="text-xs flex items-center gap-2">
+                    ${this.user?.emailVerified ? `
+                      <span class="badge badge-success" style="padding: 2px 8px; font-size:10px;">
+                        ✅ ${this.user.verificationMethod === 'google' ? 'Google Verified' : 'Verified'}
+                      </span>
+                      <span class="text-muted text-xxs">Method: ${this.user.verificationMethod === 'google' ? 'Google OAuth' : 'Email Token'}</span>
+                    ` : `
+                      <span class="badge badge-warning" style="padding: 2px 8px; font-size:10px;">
+                        🟡 Verification Required
+                      </span>
+                    `}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1556,26 +1579,379 @@ const CandidateDashboard = {
       }
     });
 
+        // ==========================================
+    // AI RESUME BUILDER PAGE BINDINGS
     // ==========================================
-    // RESUME THEME SYSTEM BINDINGS
-    // ==========================================
-    if (this.section === 'resume-themes') {
-      let activeResumeId = localStorage.getItem('activeResumeId');
-      if (!activeResumeId || activeResumeId === 'null' || activeResumeId === 'undefined') {
-        activeResumeId = 'mock-id';
-      }
+    if (this.section === 'resume-builder') {
+      const activeResumeId = localStorage.getItem('activeResumeId') || '';
 
-      // Dropdown selector for active resume
-      document.getElementById('active-resume-select')?.addEventListener('change', (e) => {
-        const id = e.target.value;
-        localStorage.setItem('activeResumeId', id);
-        this.render('resume-themes').then(html => {
+      // Back to landing
+      document.getElementById('btn-back-landing')?.addEventListener('click', () => {
+        localStorage.removeItem('activeResumeId');
+        this.render('resume-builder').then(html => {
           document.getElementById('app').innerHTML = html;
           this.bind();
         });
       });
 
-      // Tab switcher for Preview Mode (Candidate vs Recruiter)
+      // Manual start
+      document.getElementById('start-manual-btn')?.addEventListener('click', async () => {
+        try {
+          const fd = new FormData();
+          const emptyResume = {
+            name: this.user?.name || 'Your Name',
+            email: this.user?.email || 'yourname@example.com',
+            phone: '',
+            location: '',
+            summary: 'Experienced professional.',
+            skills: ['JavaScript'],
+            experience: [],
+            education: []
+          };
+          const fakeBlob = new Blob([JSON.stringify(emptyResume)], { type: 'application/json' });
+          fd.append('resume', fakeBlob, 'My_Resume.json');
+          const res = await API.uploadResume(fd);
+          if (res && res.resume && res.resume._id) {
+            localStorage.setItem('activeResumeId', res.resume._id);
+          }
+          UI.toast('Manual builder workspace initialized!', 'success');
+          this.render('resume-builder').then(html => {
+            document.getElementById('app').innerHTML = html;
+            this.bind();
+          });
+        } catch (err) { UI.toast(err.message, 'error'); }
+      });
+
+      // AI generation workflow triggering
+      document.getElementById('start-ai-btn')?.addEventListener('click', async () => {
+        const modal = document.getElementById('ai-workflow-modal');
+        if (modal) modal.classList.remove('hidden');
+
+        const steps = [
+          'wf-step-1', 'wf-step-2', 'wf-step-3', 'wf-step-4',
+          'wf-step-5', 'wf-step-6', 'wf-step-7', 'wf-step-8', 'wf-step-9'
+        ];
+
+        let currentStep = 0;
+        const progressInterval = setInterval(() => {
+          if (currentStep < steps.length) {
+            const el = document.getElementById(steps[currentStep]);
+            if (el) {
+              el.textContent = el.textContent.replace('⏳', '✓');
+              el.style.color = '#10B981';
+            }
+            currentStep++;
+            const bar = document.getElementById('workflow-progress-bar');
+            if (bar) bar.style.width = `${Math.floor((currentStep / steps.length) * 100)}%`;
+          } else {
+            clearInterval(progressInterval);
+          }
+        }, 300);
+
+        try {
+          const res = await API.generateAIResume();
+          if (res && res.resume && res.resume._id) {
+            localStorage.setItem('activeResumeId', res.resume._id);
+            UI.toast('AI Resume Generated Successfully!', 'success');
+          }
+        } catch (err) {
+          UI.toast(err.message, 'error');
+        } finally {
+          setTimeout(() => {
+            if (modal) modal.classList.add('hidden');
+            this.render('resume-builder').then(html => {
+              document.getElementById('app').innerHTML = html;
+              this.bind();
+            });
+          }, 3000);
+        }
+      });
+
+      // Tab switcher
+      const tabHeaderBtns = document.querySelectorAll('.tab-header-btn');
+      tabHeaderBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          tabHeaderBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const targetTab = btn.getAttribute('data-tab');
+          document.querySelectorAll('.editor-tab-content').forEach(content => {
+            content.classList.remove('active');
+          });
+          document.getElementById(`tab-content-${targetTab}`).classList.add('active');
+        });
+      });
+
+      // Dropdown selector for active resume
+      document.getElementById('active-resume-select')?.addEventListener('change', (e) => {
+        const id = e.target.value;
+        localStorage.setItem('activeResumeId', id);
+        this.render('resume-builder').then(html => {
+          document.getElementById('app').innerHTML = html;
+          this.bind();
+        });
+      });
+
+      // Save content info
+      document.getElementById('save-content-info-btn')?.addEventListener('click', async () => {
+        const parsedData = {
+          name: document.getElementById('edit-name')?.value || '',
+          email: document.getElementById('edit-email')?.value || '',
+          phone: document.getElementById('edit-phone')?.value || '',
+          location: document.getElementById('edit-location')?.value || '',
+          summary: document.getElementById('edit-summary')?.value || ''
+        };
+        try {
+          await API.updateResumeContent(activeResumeId, { parsed: parsedData });
+          UI.toast('Personal info draft saved!', 'success');
+          this.render('resume-builder').then(html => {
+            document.getElementById('app').innerHTML = html;
+            this.bind();
+          });
+        } catch (err) { UI.toast(err.message, 'error'); }
+      });
+
+      // Add experience row
+      document.getElementById('add-exp-btn')?.addEventListener('click', () => {
+        const container = document.getElementById('experience-edit-list');
+        const count = container.children.length;
+        const row = document.createElement('div');
+        row.className = 'card p-3 exp-edit-row';
+        row.style.background = 'rgba(255,255,255,0.01)';
+        row.style.border = '1px solid var(--border-color)';
+        row.innerHTML = `
+          <div class="grid grid-2 gap-2 mb-2">
+            <div class="form-group"><label class="form-label text-xs">Role</label><input class="form-input exp-role" value=""></div>
+            <div class="form-group"><label class="form-label text-xs">Company</label><input class="form-input exp-company" value=""></div>
+            <div class="form-group"><label class="form-label text-xs">Start Date</label><input class="form-input exp-start" value=""></div>
+            <div class="form-group"><label class="form-label text-xs">End Date</label><input class="form-input exp-end" value=""></div>
+          </div>
+          <div class="form-group">
+            <div class="flex justify-between items-center mb-1">
+              <label class="form-label text-xs">Description</label>
+              <button class="ai-inline-btn" data-action="Improve Bullet Points" data-target="exp-desc-${count}">✨ Improve</button>
+            </div>
+            <textarea class="form-textarea exp-desc" id="exp-desc-${count}" style="min-height: 80px;"></textarea>
+          </div>
+          <button class="btn btn-danger btn-xs mt-2 delete-exp-btn">Remove</button>
+        `;
+        container.appendChild(row);
+        row.querySelector('.delete-exp-btn').addEventListener('click', () => row.remove());
+      });
+
+      // Add Project row
+      document.getElementById('add-project-btn')?.addEventListener('click', () => {
+        const container = document.getElementById('projects-edit-list');
+        const count = container.children.length;
+        const row = document.createElement('div');
+        row.className = 'card p-3 proj-edit-row';
+        row.style.background = 'rgba(255,255,255,0.01)';
+        row.style.border = '1px solid var(--border-color)';
+        row.innerHTML = `
+          <div class="form-group mb-2"><label class="form-label text-xs">Project Title</label><input class="form-input proj-title" value=""></div>
+          <div class="form-group mb-2"><label class="form-label text-xs">Technologies (comma separated)</label><input class="form-input proj-tech" value=""></div>
+          <div class="form-group">
+            <div class="flex justify-between items-center mb-1">
+              <label class="form-label text-xs">Description</label>
+              <button class="ai-inline-btn" data-action="Improve Bullet Points" data-target="proj-desc-${count}">✨ Improve</button>
+            </div>
+            <textarea class="form-textarea proj-desc" id="proj-desc-${count}" style="min-height: 80px;"></textarea>
+          </div>
+          <button class="btn btn-danger btn-xs mt-2 delete-proj-btn">Remove</button>
+        `;
+        container.appendChild(row);
+        row.querySelector('.delete-proj-btn').addEventListener('click', () => row.remove());
+      });
+
+      // Add Education row
+      document.getElementById('add-edu-btn')?.addEventListener('click', () => {
+        const container = document.getElementById('education-edit-list');
+        const row = document.createElement('div');
+        row.className = 'card p-3 edu-edit-row';
+        row.style.background = 'rgba(255,255,255,0.01)';
+        row.style.border = '1px solid var(--border-color)';
+        row.innerHTML = `
+          <div class="grid grid-3 gap-2">
+            <div class="form-group"><label class="form-label text-xs">Institution</label><input class="form-input edu-inst" value=""></div>
+            <div class="form-group"><label class="form-label text-xs">Degree</label><input class="form-input edu-degree" value=""></div>
+            <div class="form-group"><label class="form-label text-xs">Year</label><input class="form-input edu-year" value=""></div>
+          </div>
+          <button class="btn btn-danger btn-xs mt-2 delete-edu-btn">Remove</button>
+        `;
+        container.appendChild(row);
+        row.querySelector('.delete-edu-btn').addEventListener('click', () => row.remove());
+      });
+
+      // Handle delete clicks for initial list items
+      document.querySelectorAll('.delete-exp-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => e.target.closest('.exp-edit-row').remove());
+      });
+      document.querySelectorAll('.delete-proj-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => e.target.closest('.proj-edit-row').remove());
+      });
+      document.querySelectorAll('.delete-edu-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => e.target.closest('.edu-edit-row').remove());
+      });
+
+      // Save Experience
+      document.getElementById('save-content-exp-btn')?.addEventListener('click', async () => {
+        const experience = [];
+        document.querySelectorAll('.exp-edit-row').forEach(row => {
+          experience.push({
+            role: row.querySelector('.exp-role').value,
+            company: row.querySelector('.exp-company').value,
+            startDate: row.querySelector('.exp-start').value,
+            endDate: row.querySelector('.exp-end').value,
+            description: row.querySelector('.exp-desc').value
+          });
+        });
+        try {
+          await API.updateResumeContent(activeResumeId, { parsed: { experience } });
+          UI.toast('Work history draft saved!', 'success');
+          this.render('resume-builder').then(html => {
+            document.getElementById('app').innerHTML = html;
+            this.bind();
+          });
+        } catch (err) { UI.toast(err.message, 'error'); }
+      });
+
+      // Save Projects
+      document.getElementById('save-content-proj-btn')?.addEventListener('click', async () => {
+        const projects = [];
+        document.querySelectorAll('.proj-edit-row').forEach(row => {
+          projects.push({
+            title: row.querySelector('.proj-title').value,
+            technologiesUsed: row.querySelector('.proj-tech').value.split(',').map(s => s.trim()).filter(Boolean),
+            description: row.querySelector('.proj-desc').value
+          });
+        });
+        try {
+          await API.updateResumeContent(activeResumeId, { parsed: { projects } });
+          UI.toast('Projects saved!', 'success');
+          this.render('resume-builder').then(html => {
+            document.getElementById('app').innerHTML = html;
+            this.bind();
+          });
+        } catch (err) { UI.toast(err.message, 'error'); }
+      });
+
+      // Save Skills
+      document.getElementById('save-content-skills-btn')?.addEventListener('click', async () => {
+        const skills = document.getElementById('edit-skills')?.value?.split(',').map(s => s.trim()).filter(Boolean) || [];
+        try {
+          await API.updateResumeContent(activeResumeId, { parsed: { skills } });
+          UI.toast('Skills saved!', 'success');
+          this.render('resume-builder').then(html => {
+            document.getElementById('app').innerHTML = html;
+            this.bind();
+          });
+        } catch (err) { UI.toast(err.message, 'error'); }
+      });
+
+      // Save Education
+      document.getElementById('save-content-edu-btn')?.addEventListener('click', async () => {
+        const education = [];
+        document.querySelectorAll('.edu-edit-row').forEach(row => {
+          education.push({
+            institution: row.querySelector('.edu-inst').value,
+            degree: row.querySelector('.edu-degree').value,
+            year: row.querySelector('.edu-year').value
+          });
+        });
+        try {
+          await API.updateResumeContent(activeResumeId, { parsed: { education } });
+          UI.toast('Education saved!', 'success');
+          this.render('resume-builder').then(html => {
+            document.getElementById('app').innerHTML = html;
+            this.bind();
+          });
+        } catch (err) { UI.toast(err.message, 'error'); }
+      });
+
+      // Inline AI buttons click handlers
+      document.querySelectorAll('.ai-inline-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const action = btn.getAttribute('data-action');
+          const targetId = btn.getAttribute('data-target');
+          const textarea = document.getElementById(targetId);
+          if (!textarea) return;
+
+          const originalText = btn.textContent;
+          btn.textContent = '⚡...';
+          btn.disabled = true;
+
+          try {
+            const res = await API.post('/ai/candidate-ai', { action, context: { text: textarea.value } });
+            if (res && res.response) {
+              textarea.value = res.response;
+              UI.toast('Text optimized by AI!', 'success');
+            }
+          } catch (err) {
+            UI.toast(err.message, 'error');
+          } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+          }
+        });
+      });
+
+      // Preset theme click handlers
+      document.querySelectorAll('.preset-theme-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const presetName = btn.getAttribute('data-preset');
+          try {
+            await API.post(`/resumes/${activeResumeId}/theme/apply`, { themeKey: presetName });
+            UI.toast('Theme applied!', 'success');
+            this.render('resume-builder').then(html => {
+              document.getElementById('app').innerHTML = html;
+              this.bind();
+            });
+          } catch (err) { UI.toast(err.message, 'error'); }
+        });
+      });
+
+      // Save styles customizer form submission
+      document.getElementById('theme-customizer-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = new FormData(e.target);
+        const customization = {
+          accentColor: form.get('accentColor'),
+          primaryColor: form.get('primaryColor'),
+          secondaryColor: form.get('secondaryColor'),
+          fontFamily: form.get('fontFamily'),
+          fontSize: parseInt(form.get('fontSize')),
+          lineHeight: parseFloat(form.get('lineHeight')),
+          margins: parseInt(form.get('margins')),
+          borderRadius: parseInt(form.get('borderRadius'))
+        };
+        try {
+          await API.post(`/resumes/${activeResumeId}/theme/customize`, { customization });
+          UI.toast('Styles saved!', 'success');
+          this.render('resume-builder').then(html => {
+            document.getElementById('app').innerHTML = html;
+            this.bind();
+          });
+        } catch (err) { UI.toast(err.message, 'error'); }
+      });
+
+      // Zoom preview logic
+      let zoom = 90;
+      const previewEl = document.getElementById('resume-preview-page');
+      document.getElementById('zoom-in-btn')?.addEventListener('click', () => {
+        zoom = Math.min(zoom + 10, 150);
+        if (previewEl) {
+          previewEl.style.transform = `scale(${zoom / 100})`;
+          document.getElementById('zoom-percent-text').textContent = `${zoom}%`;
+        }
+      });
+      document.getElementById('zoom-out-btn')?.addEventListener('click', () => {
+        zoom = Math.max(zoom - 10, 50);
+        if (previewEl) {
+          previewEl.style.transform = `scale(${zoom / 100})`;
+          document.getElementById('zoom-percent-text').textContent = `${zoom}%`;
+        }
+      });
+
+      // Mode Switch Candidate / Recruiter Preview
       document.getElementById('btn-mode-candidate')?.addEventListener('click', () => {
         localStorage.setItem('previewMode', 'candidate');
         document.getElementById('btn-mode-candidate').classList.add('active');
@@ -1583,7 +1959,6 @@ const CandidateDashboard = {
         document.getElementById('preview-candidate-view').style.display = 'block';
         document.getElementById('preview-recruiter-view').style.display = 'none';
       });
-
       document.getElementById('btn-mode-recruiter')?.addEventListener('click', () => {
         localStorage.setItem('previewMode', 'recruiter');
         document.getElementById('btn-mode-candidate').classList.remove('active');
@@ -1592,485 +1967,49 @@ const CandidateDashboard = {
         document.getElementById('preview-recruiter-view').style.display = 'block';
       });
 
-      // Zoom logic
-      let zoom = 100;
-      const previewEl = document.getElementById('resume-preview-page');
-      if (previewEl) {
-        document.getElementById('zoom-in-btn')?.addEventListener('click', () => {
-          zoom = Math.min(zoom + 10, 150);
-          document.getElementById('zoom-indicator').textContent = `${zoom}%`;
-          previewEl.style.transform = `scale(${zoom / 100})`;
-        });
-        document.getElementById('zoom-out-btn')?.addEventListener('click', () => {
-          zoom = Math.max(zoom - 10, 50);
-          document.getElementById('zoom-indicator').textContent = `${zoom}%`;
-          previewEl.style.transform = `scale(${zoom / 100})`;
-        });
-      }
-
-      // Apply theme from gallery
-      document.querySelectorAll('[data-apply-theme-name]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (activeResumeId === 'mock-id') {
-            return UI.toast('Please select or upload a resume to apply a theme.', 'warning');
-          }
-          const themeName = btn.dataset.applyThemeName;
-          try {
-            // Track recently used
-            let recently = localStorage.getItem('recentlyUsedThemes') || '';
-            let recList = recently.split(',').filter(Boolean);
-            recList = [themeName, ...recList.filter(n => n !== themeName)].slice(0, 5);
-            localStorage.setItem('recentlyUsedThemes', recList.join(','));
-
-            await API.applyTheme(activeResumeId, themeName);
-            UI.toast(`Successfully applied theme: ${themeName}`, 'success');
-            this.render('resume-themes').then(html => {
-              document.getElementById('app').innerHTML = html;
-              this.bind();
-            });
-          } catch (err) {
-            UI.toast(err.message, 'error');
-          }
-        });
-      });
-
-      // Next / Prev theme cycling
-      const cycleTheme = async (direction) => {
-        if (activeResumeId === 'mock-id') {
-          return UI.toast('Please select or upload a resume to cycle themes.', 'warning');
-        }
+      // AI Copilot features
+      document.getElementById('ai-improve-resume-btn')?.addEventListener('click', async () => {
+        const feedback = document.getElementById('ai-copilot-feedback');
+        feedback.classList.remove('hidden');
+        feedback.innerHTML = '⚡ Generating Professional Rewrite...';
         try {
-          const res = await API.getThemes();
-          const data = await API.getResumes();
-          const rObj = data.resumes.find(r => r._id === activeResumeId);
-          const currentThemeName = rObj.selectedTheme || '';
-          
-          let idx = res.themes.findIndex(t => t.name === currentThemeName || t.key === currentThemeName);
-          if (idx === -1) idx = 0;
-
-          if (direction === 'next') {
-            idx = (idx + 1) % res.themes.length;
-          } else {
-            idx = (idx - 1 + res.themes.length) % res.themes.length;
-          }
-
-          const targetTheme = res.themes[idx];
-          await API.applyTheme(activeResumeId, targetTheme.name);
-          UI.toast(`Switched theme to: ${targetTheme.name}`, 'success');
-          this.render('resume-themes').then(html => {
-            document.getElementById('app').innerHTML = html;
-            this.bind();
-          });
-        } catch (err) {
-          UI.toast(err.message, 'error');
-        }
-      };
-
-      document.getElementById('next-theme-btn')?.addEventListener('click', () => cycleTheme('next'));
-      document.getElementById('prev-theme-btn')?.addEventListener('click', () => cycleTheme('prev'));
-
-      // Favorite theme toggles
-      document.querySelectorAll('.favorite-theme-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (activeResumeId === 'mock-id') {
-            return UI.toast('Please select or upload a resume to favorite themes.', 'warning');
-          }
-          const themeId = btn.dataset.themeFavId;
-          try {
-            await API.favoriteTheme(activeResumeId, themeId);
-            UI.toast('Favorite list updated', 'success');
-            this.render('resume-themes').then(html => {
-              document.getElementById('app').innerHTML = html;
-              this.bind();
-            });
-          } catch (err) {
-            UI.toast(err.message, 'error');
-          }
-        });
+          const res = await API.post('/ai/candidate-ai', { action: 'Improve Resume', context: { resumeId: activeResumeId } });
+          feedback.innerHTML = `<strong>Feedback:</strong><p class="mt-1">${res.response || 'No feedback suggestions returned'}</p>`;
+        } catch (err) { feedback.innerHTML = `<span class="text-danger">${err.message}</span>`; }
       });
 
-      // Search filters
-      document.getElementById('search-themes-input')?.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        document.querySelectorAll('.theme-item-card').forEach(card => {
-          const name = card.dataset.themeName;
-          card.style.display = name.includes(query) ? '' : 'none';
-        });
-      });
-
-      // Category filters
-      document.querySelectorAll('.filter-cat-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.filter-cat-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          const cat = btn.dataset.cat;
-          
-          document.querySelectorAll('.theme-item-card').forEach(card => {
-            const isFav = card.dataset.themeFav === 'true';
-            const popularity = parseInt(card.dataset.themePopularity || '0');
-            const score = parseInt(card.dataset.themeAts || '0');
-            const dateScore = parseInt(card.dataset.themeId || '0');
-
-            let recently = localStorage.getItem('recentlyUsedThemes') || '';
-            let recList = recently.split(',').filter(Boolean);
-            const isRecentlyUsed = recList.includes(card.querySelector('strong').innerText);
-
-            if (cat === 'All') {
-              card.style.display = '';
-            } else if (cat === 'ATS 100%') {
-              card.style.display = score >= 98 ? '' : 'none';
-            } else if (cat === 'Favorites') {
-              card.style.display = isFav ? '' : 'none';
-            } else if (cat === 'Recently Used') {
-              card.style.display = isRecentlyUsed ? '' : 'none';
-            } else if (cat === 'Popular') {
-              card.style.display = popularity >= 900 ? '' : 'none';
-            } else if (cat === 'Newest') {
-              card.style.display = dateScore >= 35 ? '' : 'none';
-            } else {
-              card.style.display = card.dataset.themeCat === cat ? '' : 'none';
-            }
-          });
-        });
-      });
-
-      // Sandboxed Preview modal template load
-      document.querySelectorAll('[data-preview-theme-key]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const themeKey = btn.dataset.previewThemeKey;
-          const modal = document.getElementById('fullscreen-theme-modal');
-          const title = document.getElementById('modal-theme-title');
-          const content = document.getElementById('modal-theme-content');
-
-          API.getThemeById(themeKey).then(res => {
-            if (!res.success) return;
-            title.textContent = `Sandboxed Layout Preview — ${res.theme.name}`;
-            content.innerHTML = `
-              <iframe style="width:100%; height:100%; border:none; background:#FFF; border-radius:6px;" srcdoc="
-                <html>
-                  <head>
-                    <style>
-                      ${res.customCss}
-                      body { font-family: sans-serif; padding: 20px; color: #333; }
-                    </style>
-                  </head>
-                  <body>
-                    ${res.layoutHtml.replace('{{name}}', 'Alex Chen').replace('{{email}}', 'alex.chen@example.com').replace('{{phone}}', '+1 555-0199').replace('{{location}}', 'San Francisco, CA').replace('{{summary}}', 'Professional Backend Developer specializing in Python and AWS pipelines.').replace('{{experience}}', '<div class=experience-item><strong>Senior Developer — Tech Corp</strong><p>Built APIs and distributed microservices with Express.</p></div>').replace('{{skills}}', '<span class=skill-tag>JavaScript</span><span class=skill-tag>NodeJS</span><span class=skill-tag>AWS</span>').replace('{{education}}', '<p>B.S. Computer Science — Stanford University</p>')}
-                  </body>
-                </html>
-              "></iframe>
-            `;
-            modal.classList.remove('hidden');
-          });
-        });
-      });
-
-      document.getElementById('close-theme-modal')?.addEventListener('click', () => {
-        document.getElementById('fullscreen-theme-modal').classList.add('hidden');
-      });
-
-      // Instantly save visual styling adjustments
-      const autoSaveStyles = async () => {
-        const form = document.getElementById('theme-customizer-form');
-        if (!form) return;
-        const fd = new FormData(form);
-        const customization = {
-          accentColor: fd.get('accentColor'),
-          primaryColor: fd.get('primaryColor'),
-          secondaryColor: fd.get('secondaryColor'),
-          fontFamily: fd.get('fontFamily'),
-          fontSize: parseInt(fd.get('fontSize') || '12'),
-          lineHeight: parseFloat(fd.get('lineHeight') || '1.5'),
-          margins: parseInt(fd.get('margins') || '20'),
-          padding: parseInt(fd.get('padding') || '16'),
-          borderRadius: parseInt(fd.get('borderRadius') || '4'),
-          pageSize: fd.get('pageSize'),
-          headerStyle: fd.get('headerStyle'),
-          sidebarPosition: fd.get('sidebarPosition'),
-          showIcons: fd.get('showIcons') === 'true'
-        };
-        
-        // Auto update current local elements styles to avoid full redraw lag
-        if (previewEl) {
-          previewEl.style.color = customization.primaryColor;
-          previewEl.style.padding = `${customization.margins}px`;
-          previewEl.style.borderRadius = `${customization.borderRadius}px`;
-          previewEl.style.fontFamily = customization.fontFamily === 'Lora' ? 'Georgia, serif' : (customization.fontFamily === 'Fira Code' ? 'monospace' : 'system-ui');
-          previewEl.style.fontSize = `${customization.fontSize}px`;
-          previewEl.style.lineHeight = customization.lineHeight;
-        }
-
-        if (activeResumeId === 'mock-id') {
-          return;
-        }
+      document.getElementById('ai-optimize-ats-btn')?.addEventListener('click', async () => {
+        const feedback = document.getElementById('ai-copilot-feedback');
+        feedback.classList.remove('hidden');
+        feedback.innerHTML = '⚡ Optimizing ATS keywords...';
         try {
-          await API.customizeTheme(activeResumeId, customization);
-        } catch (_) {}
-      };
-
-      document.querySelectorAll('#theme-customizer-form input, #theme-customizer-form select').forEach(el => {
-        el.addEventListener('input', autoSaveStyles);
+          const res = await API.post(`/resumes/${activeResumeId}/optimize`, { jobDescription: 'Core systems development, nodeJS, databases' });
+          feedback.innerHTML = `<strong>ATS Keywords Optimized:</strong><p class="mt-1">Added missing keywords: ${(res.missingKeywords || []).join(', ') || 'None'}</p>`;
+        } catch (err) { feedback.innerHTML = `<span class="text-danger">${err.message}</span>`; }
       });
 
-      // Submit visual customizer
-      document.getElementById('theme-customizer-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (activeResumeId === 'mock-id') {
-          return UI.toast('Please select or upload a resume to save customizer styles.', 'warning');
-        }
-        await autoSaveStyles();
-        UI.toast('Theme customizer styles saved!', 'success');
-        this.render('resume-themes').then(html => {
-          document.getElementById('app').innerHTML = html;
-          this.bind();
-        });
-      });
-
-      // SECTION BUILDER HANDLERS
-      // Up/Down reordering
-      document.querySelectorAll('.move-sec-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (activeResumeId === 'mock-id') {
-            return UI.toast('Please select or upload a resume to reorder sections.', 'warning');
-          }
-          const section = btn.dataset.secId;
-          const direction = btn.dataset.dir;
-          
-          const data = await API.getResumes();
-          const r = data.resumes.find(x => x._id === activeResumeId);
-          if (!r) return;
-
-          let order = r.themeCustomization?.sectionOrder || ['summary', 'experience', 'skills', 'education', 'projects', 'achievements', 'certificates', 'languages', 'research'];
-          let idx = order.indexOf(section);
-          if (idx !== -1) {
-            if (direction === 'up' && idx > 0) {
-              [order[idx], order[idx - 1]] = [order[idx - 1], order[idx]];
-            } else if (direction === 'down' && idx < order.length - 1) {
-              [order[idx], order[idx + 1]] = [order[idx + 1], order[idx]];
-            }
-            await API.customizeTheme(activeResumeId, { sectionOrder: order });
-            this.render('resume-themes').then(html => {
-              document.getElementById('app').innerHTML = html;
-              this.bind();
-            });
-          }
-        });
-      });
-
-      // Hide/Show section builder
-      document.querySelectorAll('.toggle-sec-visibility').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (activeResumeId === 'mock-id') {
-            return UI.toast('Please select or upload a resume to toggle section visibility.', 'warning');
-          }
-          const section = btn.dataset.secId;
-          const data = await API.getResumes();
-          const r = data.resumes.find(x => x._id === activeResumeId);
-          if (!r) return;
-
-          let hidden = r.themeCustomization?.hiddenSections || [];
-          if (hidden.includes(section)) {
-            hidden = hidden.filter(s => s !== section);
-          } else {
-            hidden.push(section);
-          }
-          await API.customizeTheme(activeResumeId, { hiddenSections: hidden });
-          this.render('resume-themes').then(html => {
-            document.getElementById('app').innerHTML = html;
-            this.bind();
-          });
-        });
-      });
-
-      // Rename section builder
-      document.querySelectorAll('.rename-sec-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (activeResumeId === 'mock-id') {
-            return UI.toast('Please select or upload a resume to rename sections.', 'warning');
-          }
-          const section = btn.dataset.secId;
-          const newName = prompt(`Enter new display name for "${section}":`);
-          if (!newName) return;
-          const data = await API.getResumes();
-          const r = data.resumes.find(x => x._id === activeResumeId);
-          if (!r) return;
-
-          let renamed = r.themeCustomization?.renamedSections || {};
-          renamed[section] = newName;
-          await API.customizeTheme(activeResumeId, { renamedSections: renamed });
-          this.render('resume-themes').then(html => {
-            document.getElementById('app').innerHTML = html;
-            this.bind();
-          });
-        });
-      });
-
-      // Create new section builder
-      document.getElementById('add-custom-sec-btn')?.addEventListener('click', async () => {
-        if (activeResumeId === 'mock-id') {
-          return UI.toast('Please select or upload a resume to add custom sections.', 'warning');
-        }
-        const title = prompt('Enter new Custom Section title:');
-        const content = prompt('Enter content text:');
-        if (!title || !content) return;
-        const data = await API.getResumes();
-        const r = data.resumes.find(x => x._id === activeResumeId);
-        if (!r) return;
-
-        let customs = r.themeCustomization?.customSections || [];
-        customs.push({ title, content });
-        await API.customizeTheme(activeResumeId, { customSections: customs });
-        this.render('resume-themes').then(html => {
-          document.getElementById('app').innerHTML = html;
-          this.bind();
-        });
-      });
-
-      // Profile photo upload helper
-      document.getElementById('upload-profile-pic-btn')?.addEventListener('change', async (e) => {
-        if (activeResumeId === 'mock-id') {
-          return UI.toast('Please select or upload a resume to change profile photo.', 'warning');
-        }
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async () => {
-          await API.customizeTheme(activeResumeId, { profilePictureUrl: reader.result });
-          this.render('resume-themes').then(html => {
-            document.getElementById('app').innerHTML = html;
-            this.bind();
-          });
-        };
-        reader.readAsDataURL(file);
-      });
-
-      // AI Layout Generator Style
-      document.getElementById('run-ai-theme-generator-btn')?.addEventListener('click', async (e) => {
-        if (activeResumeId === 'mock-id') {
-          return UI.toast('Please select or upload a resume to run AI theme generation.', 'warning');
-        }
-        const promptStr = document.getElementById('ai-generator-prompt')?.value;
-        if (!promptStr) return UI.toast('Please write a prompt first (e.g. Apple layout)', 'warning');
-        
-        e.target.disabled = true;
-        e.target.textContent = 'Generating...';
+      document.getElementById('ai-grammar-check-btn')?.addEventListener('click', async () => {
+        const feedback = document.getElementById('ai-copilot-feedback');
+        feedback.classList.remove('hidden');
+        feedback.innerHTML = '⚡ Checking grammar & syntax...';
         try {
-          await API.generateAITheme(activeResumeId, promptStr);
-          UI.toast('AI customized style rules injected successfully!', 'success');
-          this.render('resume-themes').then(html => {
-            document.getElementById('app').innerHTML = html;
-            this.bind();
-          });
-        } catch (err) {
-          UI.toast(err.message, 'error');
-        } finally {
-          e.target.disabled = false;
-          e.target.textContent = 'Generate Style';
-        }
+          const res = await API.post('/ai/candidate-ai', { action: 'Grammar Check', context: { resumeId: activeResumeId } });
+          feedback.innerHTML = `<strong>Grammar Check:</strong><p class="mt-1">${res.response || 'No errors found!'}</p>`;
+        } catch (err) { feedback.innerHTML = `<span class="text-danger">${err.message}</span>`; }
       });
 
-      // Job description optimizer
-      document.getElementById('run-jd-optimizer-btn')?.addEventListener('click', async (e) => {
-        if (activeResumeId === 'mock-id') {
-          return UI.toast('Please select or upload a resume to run JD optimization.', 'warning');
-        }
-        const jobDescription = document.getElementById('jd-optimizer-textarea')?.value;
-        if (!jobDescription) return UI.toast('Paste a job description first', 'warning');
-        
-        e.target.disabled = true;
-        e.target.textContent = 'Analyzing...';
+      document.getElementById('ai-run-tailor-btn')?.addEventListener('click', async () => {
+        const jd = document.getElementById('ai-tailor-jd').value;
+        const feedback = document.getElementById('ai-copilot-feedback');
+        feedback.classList.remove('hidden');
+        feedback.innerHTML = '⚡ Tailoring resume structure...';
         try {
-          const res = await API.optimizeResume(activeResumeId, jobDescription);
-          UI.toast('ATS Optimizer checklist computed!', 'success');
-          
-          const feedback = document.getElementById('jd-optimizer-feedback');
-          feedback.classList.remove('hidden');
-          feedback.innerHTML = `
-            <strong>ATS Compatibility Result:</strong><br>
-            Current Match: <strong>${res.currentAtsMatch}%</strong> → Improved: <strong class="text-success">${res.improvedAtsMatch}%</strong><br>
-            <div class="mt-2">
-              <strong>Injected Skill Keywords:</strong><br>
-              ${res.missingKeywords?.map(k => `<span class="badge badge-primary badge-sm mr-1">${k}</span>`).join('') || 'None'}
-            </div>
-          `;
-          
-          this.render('resume-themes').then(html => {
-            document.getElementById('app').innerHTML = html;
-            this.bind();
-            document.getElementById('jd-optimizer-feedback').classList.remove('hidden');
-            document.getElementById('jd-optimizer-feedback').innerHTML = feedback.innerHTML;
-          });
-        } catch (err) {
-          UI.toast(err.message, 'error');
-        } finally {
-          e.target.disabled = false;
-          e.target.textContent = 'Analyze & Tailor';
-        }
+          const res = await API.post(`/resumes/${activeResumeId}/dynamic`, { jobDescription: jd });
+          feedback.innerHTML = `<strong>Tailored Recommendations:</strong><p class="mt-1">${res.dynamic?.tailoredSummary || 'Completed!'}</p>`;
+        } catch (err) { feedback.innerHTML = `<span class="text-danger">${err.message}</span>`; }
       });
 
-      // Load Version history list and bind restores
-      if (activeResumeId !== 'mock-id') {
-        API.getVersions(activeResumeId).then(res => {
-          const list = document.getElementById('versions-history-list');
-          if (list) {
-            list.innerHTML = (res.versions || []).map(v => `
-              <div class="flex justify-between items-center p-2 rounded glass-card text-xs">
-                <span>Version ${v.versionNumber}</span>
-                <button class="btn btn-ghost btn-xs text-primary restore-ver-btn" data-ver-num="${v.versionNumber}">Restore</button>
-              </div>
-            `).join('') || '<p class="text-xs text-secondary">No versions saved yet.</p>';
-
-            document.querySelectorAll('.restore-ver-btn').forEach(btn => {
-              btn.addEventListener('click', async () => {
-                const num = parseInt(btn.dataset.verNum);
-                try {
-                  await API.restoreVersion(activeResumeId, num);
-                  UI.toast(`Restored to Version checkpoint ${num}!`, 'success');
-                  this.render('resume-themes').then(html => {
-                    document.getElementById('app').innerHTML = html;
-                    this.bind();
-                  });
-                } catch (err) {
-                  UI.toast(err.message, 'error');
-                }
-              });
-            });
-          }
-        }).catch(() => {});
-      } else {
-        const list = document.getElementById('versions-history-list');
-        if (list) {
-          list.innerHTML = '<p class="text-xs text-secondary">No versions saved yet.</p>';
-        }
-      }
-
-
-      // Duplicate Saved Variants (e.g. Google Resume, Amazon Resume, etc.)
-      document.getElementById('duplicate-variant-btn')?.addEventListener('click', async () => {
-        const variantName = prompt('Enter a name for this resume variant (e.g. Google Resume, Amazon Resume, Research Resume):');
-        if (!variantName) return;
-        try {
-          const data = await API.getResumes();
-          const currentResume = data.resumes.find(r => r._id === activeResumeId);
-          if (!currentResume) return;
-
-          const fd = new FormData();
-          const fakeBlob = new Blob([JSON.stringify(currentResume.parsed)], { type: 'application/json' });
-          fd.append('resume', fakeBlob, `${variantName.replace(/\s+/g, '_')}_resume.json`);
-
-          await API.uploadResume(fd);
-          UI.toast(`Created variant: ${variantName}`, 'success');
-          
-          this.render('resume-themes').then(html => {
-            document.getElementById('app').innerHTML = html;
-            this.bind();
-          });
-        } catch (err) {
-          UI.toast(err.message, 'error');
-        }
-      });
-
-      // Export file buttons handlers
+      // Export Buttons
       const downloadTextFile = (content, filename, mimeType) => {
         const blob = new Blob([content], { type: mimeType });
         const a = document.createElement('a');
@@ -2086,66 +2025,416 @@ const CandidateDashboard = {
         const content = document.getElementById('resume-preview-page').outerHTML;
         printWindow.document.write(`
           <html>
-            <head>
-              <title>Print Resume</title>
-              <style>
-                body { margin:0; padding:20px; font-family:sans-serif; }
-                #resume-preview-page { width:100% !important; min-height:0 !important; box-shadow:none !important; transform:none !important; }
-                @media print {
-                  body { padding:0; }
-                  #resume-preview-page { padding:0 !important; border:none !important; }
-                }
-              </style>
-            </head>
-            <body>
-              ${content}
-              <script>window.onload = function() { window.print(); window.close(); }</script>
-            </body>
+            <head><title>Print Resume</title></head>
+            <body>${content}<script>window.onload = function() { window.print(); window.close(); }</script></body>
           </html>
         `);
         printWindow.document.close();
-        UI.toast('PDF Export screen loaded', 'success');
       });
 
       document.getElementById('exp-docx-btn')?.addEventListener('click', () => {
         const text = document.getElementById('resume-preview-page').innerText;
         downloadTextFile(text, 'resume.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        UI.toast('DOCX export started successfully', 'success');
       });
 
       document.getElementById('exp-html-btn')?.addEventListener('click', () => {
         const html = document.getElementById('resume-preview-page').outerHTML;
         downloadTextFile(html, 'resume.html', 'text/html');
-        UI.toast('HTML export downloaded', 'success');
+      });
+    }
+
+        // ==========================================
+    // RESUME SIMULATION PAGE BINDINGS
+    // ==========================================
+    if (this.section === 'resume-simulation') {
+      const resetSimulation = () => {
+        localStorage.removeItem('simResumeId');
+        localStorage.removeItem('generalSimResult');
+        localStorage.removeItem('companySimResult');
+        this.render('resume-simulation').then(html => {
+          document.getElementById('app').innerHTML = html;
+          this.bind();
+        });
+      };
+
+      document.getElementById('btn-reset-simulation')?.addEventListener('click', resetSimulation);
+
+      // Choose Manual Resume
+      document.getElementById('choose-manual-sim-btn')?.addEventListener('click', () => {
+        const id = document.getElementById('sim-select-manual').value;
+        if (!id) return UI.toast('No manual resume available', 'error');
+        localStorage.setItem('simResumeId', id);
+        this.render('resume-simulation').then(html => {
+          document.getElementById('app').innerHTML = html;
+          this.bind();
+        });
       });
 
-      document.getElementById('exp-md-btn')?.addEventListener('click', () => {
-        const previewEl = document.getElementById('resume-preview-page');
-        const markdown = `# ${previewEl.querySelector('h1').innerText}\n\n${previewEl.innerText}`;
-        downloadTextFile(markdown, 'resume.md', 'text/markdown');
-        UI.toast('Markdown export downloaded', 'success');
+      // Choose Dynamic Resume
+      document.getElementById('choose-dynamic-sim-btn')?.addEventListener('click', () => {
+        const id = document.getElementById('sim-select-dynamic').value;
+        if (!id) return UI.toast('No dynamic resume available', 'error');
+        localStorage.setItem('simResumeId', id);
+        this.render('resume-simulation').then(html => {
+          document.getElementById('app').innerHTML = html;
+          this.bind();
+        });
       });
 
-      document.getElementById('exp-json-btn')?.addEventListener('click', async () => {
-        const data = await API.getResumes();
-        const currentResume = data.resumes.find(r => r._id === activeResumeId);
-        downloadTextFile(JSON.stringify(currentResume, null, 2), 'resume_schema.json', 'application/json');
-        UI.toast('JSON Schema export downloaded', 'success');
+      // General Simulation Runner
+      document.getElementById('btn-run-general-sim')?.addEventListener('click', async (e) => {
+        const activeId = localStorage.getItem('simResumeId');
+        if (!activeId) return;
+
+        const btn = e.target;
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⚡ Simulating Recruiter Evaluation...';
+
+        try {
+          const res = await API.advancedSimulateResume(activeId, {});
+          if (res && res.simulation) {
+            localStorage.setItem('generalSimResult', JSON.stringify(res.simulation));
+            UI.toast('General Evaluation Complete!', 'success');
+            
+            // Re-render and bind to show results
+            this.render('resume-simulation').then(html => {
+              document.getElementById('app').innerHTML = html;
+              this.bind();
+            });
+          }
+        } catch (err) {
+          UI.toast(err.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
       });
 
-      document.getElementById('exp-png-btn')?.addEventListener('click', () => {
-        UI.toast('Exporting canvas PNG. Please use PDF Print option for full crisp resolution.', 'info');
-        const html = document.getElementById('resume-preview-page').outerHTML;
-        const svg = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="595" height="842">
-            <foreignObject width="100%" height="100%">
-              <div xmlns="http://www.w3.org/1999/xhtml">
-                ${html}
+      // Populate General Simulation results if they exist in localStorage
+      const generalResultStr = localStorage.getItem('generalSimResult');
+      if (generalResultStr) {
+        const sim = JSON.parse(generalResultStr);
+        const resultsContainer = document.getElementById('simulation-general-results');
+        const triggerContainer = document.getElementById('sim-general-trigger-container');
+        
+        if (resultsContainer) resultsContainer.classList.remove('hidden');
+        if (triggerContainer) triggerContainer.style.display = 'none';
+
+        // GAUGE
+        const overallGauge = document.getElementById('gauge-overall');
+        if (overallGauge) {
+          overallGauge.textContent = sim.overallScore || 0;
+          overallGauge.style.borderColor = (sim.overallScore || 0) >= 80 ? '#10B981' : ((sim.overallScore || 0) >= 60 ? '#3B82F6' : '#EF4444');
+        }
+
+        // RATING BADGE
+        const ratingBadge = document.getElementById('badge-overall-rating');
+        if (ratingBadge) {
+          ratingBadge.textContent = sim.overallRating || 'Good';
+          ratingBadge.className = `badge mt-2 badge-${sim.overallRating === 'Excellent' ? 'success' : (sim.overallRating === 'Good' ? 'primary' : (sim.overallRating === 'Average' ? 'warning' : 'danger'))}`;
+        }
+
+        // PROGRESS BARS
+        const setProgress = (textId, fillId, val) => {
+          const textEl = document.getElementById(textId);
+          const fillEl = document.getElementById(fillId);
+          if (textEl) textEl.textContent = `${val || 0}%`;
+          if (fillEl) fillEl.style.width = `${val || 0}%`;
+        };
+
+        setProgress('text-hiring-prob', 'fill-hiring-prob', sim.hiringProbability);
+        setProgress('text-ats-compat', 'fill-ats-compat', sim.atsCompatibilityScore);
+        setProgress('text-confidence', 'fill-confidence', sim.confidenceScore);
+        setProgress('text-tech-strength', 'fill-tech-strength', sim.technicalStrength);
+        setProgress('text-exp-quality', 'fill-exp-quality', sim.experienceQuality);
+        setProgress('text-skill-coverage', 'fill-skill-coverage', sim.skillCoverage);
+        setProgress('text-comm-score', 'fill-comm-score', sim.communicationScore);
+        setProgress('text-lead-score', 'fill-lead-score', sim.leadershipScore);
+        setProgress('text-proj-quality', 'fill-proj-quality', sim.projectQuality);
+        setProgress('text-edu-strength', 'fill-edu-strength', sim.educationStrength);
+
+        // LISTS
+        const populateList = (id, items) => {
+          const el = document.getElementById(id);
+          if (el) el.innerHTML = (items || []).map(i => `<li>${i}</li>`).join('') || '<li>None identified</li>';
+        };
+
+        populateList('list-strengths', [...(sim.strengths || []), ...(sim.positiveHighlights || [])]);
+        populateList('list-weaknesses', [...(sim.weaknesses || []), ...(sim.recruiterConcerns || [])]);
+        populateList('list-missing', [...(sim.missingSkills || []), ...(sim.missingKeywords || [])]);
+        populateList('list-ats', [...(sim.atsProblems || []), ...(sim.formattingIssues || [])]);
+        populateList('list-growth', [...(sim.careerGrowthSuggestions || []), ...(sim.priorityImprovements || [])]);
+      }
+
+      // Company Simulation Runner
+      document.getElementById('btn-run-company-sim')?.addEventListener('click', async (e) => {
+        const activeId = localStorage.getItem('simResumeId');
+        if (!activeId) return;
+
+        const btn = e.target;
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⚡ Running Target Company Simulation...';
+
+        const coData = {
+          company: document.getElementById('sim-company-select').value,
+          role: document.getElementById('sim-company-role').value,
+          yearsOfExperience: document.getElementById('sim-company-yoe').value,
+          jobDescription: document.getElementById('sim-company-jd').value
+        };
+
+        try {
+          const res = await API.advancedSimulateResume(activeId, coData);
+          if (res && res.simulation) {
+            localStorage.setItem('companySimResult', JSON.stringify(res.simulation));
+            UI.toast('Company Simulation Complete!', 'success');
+            
+            this.render('resume-simulation').then(html => {
+              document.getElementById('app').innerHTML = html;
+              this.bind();
+            });
+          }
+        } catch (err) {
+          UI.toast(err.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      });
+
+      // Populate Company simulation results if they exist in localStorage
+      const companyResultStr = localStorage.getItem('companySimResult');
+      if (companyResultStr) {
+        const sim = JSON.parse(companyResultStr);
+        const resultsContainer = document.getElementById('simulation-company-results');
+        if (resultsContainer) resultsContainer.classList.remove('hidden');
+
+        const coMatch = sim.companyMatch || {};
+
+        const titleEl = document.getElementById('company-sim-title');
+        if (titleEl) {
+          titleEl.textContent = `${coMatch.company || 'Company'} Compatibility Match Report`;
+        }
+
+        const coMatchText = document.getElementById('text-co-match');
+        if (coMatchText) coMatchText.textContent = `${coMatch.overallMatchScore || 0}%`;
+
+        const setProgress = (textId, fillId, val) => {
+          const textEl = document.getElementById(textId);
+          const fillEl = document.getElementById(fillId);
+          if (textEl) textEl.textContent = `${val || 0}%`;
+          if (fillEl) fillEl.style.width = `${val || 0}%`;
+        };
+
+        setProgress('text-co-interview', 'fill-co-interview', coMatch.interviewProbability);
+        setProgress('text-co-ats', 'fill-co-ats', coMatch.atsMatch);
+        setProgress('text-co-skill', 'fill-co-skill', coMatch.skillMatch);
+        setProgress('text-co-exp', 'fill-co-exp', coMatch.experienceMatch);
+        setProgress('text-co-proj', 'fill-co-proj', coMatch.projectMatch);
+        setProgress('text-co-culture', 'fill-co-culture', coMatch.cultureFitEstimate);
+
+        const recFeedback = coMatch.recruiterFeedback || {};
+        const setFeedbackText = (id, text) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = text || 'N/A';
+        };
+
+        setFeedbackText('text-co-strongest', recFeedback.strongestSection);
+        setFeedbackText('text-co-weakest', recFeedback.weakestSection);
+        setFeedbackText('text-co-salary', recFeedback.expectedSalaryRange);
+        setFeedbackText('text-co-readiness', recFeedback.careerReadiness);
+
+        const populateList = (id, items) => {
+          const el = document.getElementById(id);
+          if (el) el.innerHTML = (items || []).map(i => `<li>${i}</li>`).join('') || '<li>None identified</li>';
+        };
+
+        populateList('list-co-shortlist', recFeedback.reasonsForShortlisting || []);
+        populateList('list-co-concerns', recFeedback.concerns || []);
+        populateList('list-co-questions', recFeedback.expectedInterviewQuestions || []);
+        populateList('list-co-projects', [...(recFeedback.projectsToAdd || []), ...(recFeedback.recommendedCertifications || [])]);
+
+        // PDF Generation Trigger
+        document.getElementById('btn-download-pdf-report')?.addEventListener('click', () => {
+          const general = JSON.parse(localStorage.getItem('generalSimResult') || '{}');
+          
+          const metaEl = document.getElementById('print-co-meta');
+          if (metaEl) {
+            metaEl.innerHTML = `
+              <strong>Simulation Target:</strong> ${coMatch.company || 'Specified Company'} | ${coMatch.role || 'Role'}<br>
+              <strong>Overall Compatibility Match:</strong> ${coMatch.overallMatchScore || 0}%
+            `;
+          }
+
+          const baseEl = document.getElementById('print-baseline-summary');
+          if (baseEl) {
+            baseEl.innerHTML = `
+              Overall Score: ${general.overallScore || 0}% (${general.overallRating || 'Good'})<br>
+              Hiring Probability: ${general.hiringProbability || 0}%<br>
+              ATS Compatibility: ${general.atsCompatibilityScore || 0}%<br><br>
+              <strong>Strengths Identified:</strong><br>
+              ${(general.strengths || []).map(s => `- ${s}`).join('<br>') || 'None'}
+            `;
+          }
+
+          const compEl = document.getElementById('print-company-summary');
+          if (compEl) {
+            compEl.innerHTML = `
+              Culture Fit: ${coMatch.cultureFitEstimate || 0}%<br>
+              Recruiter Insights: ${(recFeedback.reasonsForShortlisting || []).join(', ') || 'N/A'}<br><br>
+              <strong>Top Improvement Recommendations:</strong><br>
+              ${(recFeedback.topImprovements || []).map(s => `- ${s}`).join('<br>') || 'None'}
+            `;
+          }
+
+          window.print();
+        });
+      }
+    }
+
+    // ==========================================
+    // RESUME SCREENING PAGE BINDINGS
+    // ==========================================
+    if (this.section === 'resume-screening') {
+      document.getElementById('run-screening-btn')?.addEventListener('click', async () => {
+        const id = document.getElementById('screen-resume-select').value;
+        if (!id) return UI.toast('Please select a resume', 'error');
+
+        const resultsContainer = document.getElementById('screening-results-container');
+        const contentEl = document.getElementById('screening-results-content');
+        
+        resultsContainer.classList.remove('hidden');
+        contentEl.innerHTML = '<div class="spinner"></div>';
+
+        try {
+          const res = await API.getResumeTimeline(id);
+          contentEl.innerHTML = `
+            <div class="card p-4" style="border: 1px solid var(--border-color)">
+              <h4>Extracted Professional Timeline</h4>
+              <ul class="mt-2 text-xs text-secondary" style="list-style-type: decimal; padding-left: 16px;">
+                ${(res.timeline || []).map(t => `
+                  <li><strong>${t.title}</strong> at ${t.company} (${t.start} - ${t.end}) [${t.type}]</li>
+                `).join('') || '<li>No timeline elements detected</li>'}
+              </ul>
+            </div>
+          `;
+        } catch (err) {
+          contentEl.innerHTML = `<p class="text-danger">${err.message}</p>`;
+        }
+      });
+    }
+
+    // ==========================================
+    // RESUME IMPROVEMENT PAGE BINDINGS
+    // ==========================================
+    if (this.section === 'resume-improvement') {
+      document.getElementById('run-improvement-btn')?.addEventListener('click', async () => {
+        const id = document.getElementById('improve-resume-select').value;
+        if (!id) return UI.toast('Please select a resume', 'error');
+
+        const resultsContainer = document.getElementById('improvement-results-container');
+        const contentEl = document.getElementById('improvement-results-content');
+        
+        resultsContainer.classList.remove('hidden');
+        contentEl.innerHTML = '<div class="spinner"></div>';
+
+        try {
+          const res = await API.getImprovementReport(id);
+          const report = res.report || {};
+          contentEl.innerHTML = `
+            <div class="flex justify-between items-center mb-4 p-3 rounded" style="background: rgba(37,99,235,0.06)">
+              <div><strong>Grade Level:</strong> <span class="badge badge-primary">${report.overallGrade || 'B'}</span></div>
+              <div><strong>Estimated Lift:</strong> <strong class="text-success">+${report.estimatedScoreIncrease || 15}%</strong></div>
+            </div>
+            <div class="flex flex-col gap-2">
+              ${(report.improvements || []).map(imp => `
+                <div class="leaderboard-item" style="padding:12px; display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <strong>${imp.area}</strong>
+                    <div class="text-xs text-muted mt-1">${imp.suggestion}</div>
+                  </div>
+                  <span class="badge badge-${imp.priority === 'high' ? 'primary' : 'warning'}">${imp.priority}</span>
+                </div>
+              `).join('') || '<p>All checks passed successfully</p>'}
+            </div>
+          `;
+        } catch (err) {
+          contentEl.innerHTML = `<p class="text-danger">${err.message}</p>`;
+        }
+      });
+    }
+
+    // ==========================================
+    // RESUME MATCHING PAGE BINDINGS
+    // ==========================================
+    if (this.section === 'resume-matching') {
+      document.getElementById('run-matching-btn')?.addEventListener('click', async () => {
+        const resultsContainer = document.getElementById('matching-results-container');
+        const contentEl = document.getElementById('matching-results-content');
+        
+        resultsContainer.classList.remove('hidden');
+        contentEl.innerHTML = '<div class="spinner"></div>';
+
+        try {
+          const data = await API.getJobRecommendations();
+          const recs = data.recommendations || [];
+          contentEl.innerHTML = recs.map(j => `
+            <div class="leaderboard-item p-4" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-color);">
+              <div>
+                <strong style="font-size:14px;">${j.title}</strong>
+                <div class="text-xs text-secondary mt-1">${j.company} | ${j.location || 'Remote'}</div>
               </div>
-            </foreignObject>
-          </svg>
-        `;
-        downloadTextFile(svg, 'resume_snapshot.svg', 'image/svg+xml');
+              <span class="badge badge-primary">${j.match || 80}% Compatibility Match</span>
+            </div>
+          `).join('') || '<p class="text-secondary text-center">No active job matches found</p>';
+        } catch (err) {
+          contentEl.innerHTML = `<p class="text-danger">${err.message}</p>`;
+        }
+      });
+    }
+
+    // ==========================================
+    // DYNAMIC RESUME PAGE BINDINGS
+    // ==========================================
+    if (this.section === 'dynamic-resume') {
+      document.getElementById('run-dynamic-btn')?.addEventListener('click', async () => {
+        const id = document.getElementById('dynamic-resume-select').value;
+        const job = document.getElementById('dynamic-job-title').value;
+        if (!id) return UI.toast('Please select a resume', 'error');
+
+        const resultsContainer = document.getElementById('dynamic-results-container');
+        const contentEl = document.getElementById('dynamic-results-content');
+        
+        resultsContainer.classList.remove('hidden');
+        contentEl.innerHTML = '<div class="spinner"></div>';
+
+        try {
+          const res = await API.post(`/resumes/${id}/dynamic`, { jobDescription: job });
+          const dynamic = res.dynamic || {};
+          contentEl.innerHTML = `
+            <div class="card p-4" style="border: 1px solid var(--border-color);">
+              <h4>Tailored Executive Summary</h4>
+              <p style="font-style: italic; font-size:12px;">"${dynamic.tailoredSummary || 'No summary generated'}"</p>
+            </div>
+            <div class="grid grid-2 gap-4">
+              <div class="card p-3" style="border: 1px solid var(--border-color);">
+                <h5>Highlighted Skill Tags</h5>
+                <div class="flex flex-wrap gap-1 mt-2">
+                  ${(dynamic.highlightedSkills || []).map(s => `<span class="badge badge-primary">${s}</span>`).join('') || 'None'}
+                </div>
+              </div>
+              <div class="card p-3" style="border: 1px solid var(--border-color);">
+                <h5>Suggested Layout Changes</h5>
+                <ul class="text-xs text-secondary mt-2 pl-4" style="list-style-type:circle;">
+                  ${(dynamic.suggestedChanges || []).map(c => `<li>${c}</li>`).join('') || 'None'}
+                </ul>
+              </div>
+            </div>
+          `;
+        } catch (err) {
+          contentEl.innerHTML = `<p class="text-danger">${err.message}</p>`;
+        }
       });
     }
   },
@@ -2707,7 +2996,7 @@ const CandidateDashboard = {
   // ==========================================
   // RESUME THEME MARKETPLACE VIEW
   // ==========================================
-  async renderResumeThemes() {
+    async renderResumeBuilder() {
     let resumes = [];
     let themes = [];
     try {
@@ -2721,383 +3010,498 @@ const CandidateDashboard = {
     if (activeId === 'undefined' || activeId === 'null') {
       activeId = '';
     }
-    const selectedResumeId = activeId || (resumes[0] ? resumes[0]._id : 'mock-id');
-    
-    const isValidId = selectedResumeId && /^[0-9a-fA-F]{24}$/.test(selectedResumeId);
-    if (isValidId) {
-      localStorage.setItem('activeResumeId', selectedResumeId);
-    } else {
-      localStorage.setItem('activeResumeId', 'mock-id');
+    const selectedResumeId = activeId || (resumes[0] ? resumes[0]._id : '');
+
+    if (!selectedResumeId) {
+      return `
+        <div class="page-header text-center mb-8">
+          <h2 style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #3B82F6, #10B981); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">AI Resume Builder</h2>
+          <p class="text-secondary mt-2">Create beautiful professional resumes manually or let AI build one for you in seconds.</p>
+        </div>
+
+        <div class="grid grid-2 gap-8 max-w-4xl mx-auto" style="margin-top: 40px;">
+          <!-- Manual Card -->
+          <div class="card glass-card hover-lift text-center" style="padding: 40px 24px; border: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; gap: 20px;">
+            <div style="font-size: 3rem;">🛠️</div>
+            <h3 style="font-size: 1.5rem; font-weight: 700;">Manual Resume</h3>
+            <p class="text-secondary" style="font-size: 0.95rem; line-height: 1.6;">Create and edit your resume manually step-by-step using our premium interactive builder and themes.</p>
+            <button class="btn btn-primary mt-4" id="start-manual-btn" style="width: 200px;">Create Manually</button>
+          </div>
+
+          <!-- AI Card -->
+          <div class="card glass-card hover-lift text-center" style="padding: 40px 24px; border: 1px dashed var(--primary-color); display: flex; flex-direction: column; align-items: center; gap: 20px;">
+            <div style="font-size: 3rem;">✨</div>
+            <h3 style="font-size: 1.5rem; font-weight: 700;">AI Dynamic Resume</h3>
+            <p class="text-secondary" style="font-size: 0.95rem; line-height: 1.6;">Let AI automatically generate a tailored professional resume using your profile, uploaded resume, GitHub activity, and account info.</p>
+            <button class="btn btn-primary mt-4" id="start-ai-btn" style="width: 200px; background: linear-gradient(135deg, #2563EB, #10B981); border: none;">Generate with AI</button>
+          </div>
+        </div>
+
+        <!-- Hidden Workflow Modal -->
+        <div id="ai-workflow-modal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100vh; background: rgba(11,14,20,0.96); z-index: 3000; display:flex; justify-content:center; align-items:center;">
+          <div class="card glass-card" style="width: 480px; padding: 32px; border: 1px solid var(--border-color);">
+            <h3 class="mb-4 text-center">🤖 AI Synthesis Engine</h3>
+            <div class="w-full bg-slate-800 rounded-full h-2.5 mb-6" style="background:#1e293b; border-radius:8px; overflow:hidden;">
+              <div id="workflow-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(135deg, #3b82f6, #10b981); transition: width 0.3s ease;"></div>
+            </div>
+            <div id="workflow-list" class="flex flex-col gap-3 text-sm">
+              <div class="workflow-step" id="wf-step-1">⏳ Reading Profile...</div>
+              <div class="workflow-step" id="wf-step-2">⏳ Reading Resume...</div>
+              <div class="workflow-step" id="wf-step-3">⏳ Reading GitHub...</div>
+              <div class="workflow-step" id="wf-step-4">⏳ Selecting Best Projects...</div>
+              <div class="workflow-step" id="wf-step-5">⏳ Creating Professional Summary...</div>
+              <div class="workflow-step" id="wf-step-6">⏳ Generating Experience...</div>
+              <div class="workflow-step" id="wf-step-7">⏳ Optimizing ATS Score...</div>
+              <div class="workflow-step" id="wf-step-8">⏳ Applying Resume Theme...</div>
+              <div class="workflow-step" id="wf-step-9">⏳ Finalizing Resume...</div>
+            </div>
+          </div>
+        </div>
+      `;
     }
 
-    let realActiveResume = isValidId ? resumes.find(r => r._id === selectedResumeId) : null;
-    let activeResume = realActiveResume;
+    let activeResume = resumes.find(r => r._id === selectedResumeId);
     if (!activeResume) {
       activeResume = {
-        _id: 'mock-id',
-        filename: 'demo_resume.pdf',
-        score: 87,
+        _id: selectedResumeId,
+        filename: 'New_Resume.pdf',
+        score: 80,
         parsed: {
-          name: 'Alex Chen',
-          email: 'alex.chen@example.com',
-          phone: '+1 (555) 019-2834',
-          location: 'San Francisco, CA',
-          summary: 'Experienced Software Engineer with a background in designing high-throughput distributed systems and cloud native architectures.',
-          skills: ['JavaScript', 'Python', 'React', 'Docker', 'Kubernetes', 'AWS', 'NodeJS'],
-          experience: [
-            {
-              role: 'Senior Software Engineer',
-              company: 'CloudTech Corp',
-              startDate: '2023',
-              endDate: 'Present',
-              description: 'Led a team of 4 engineers to migrate legacy backend monolith to microservices on AWS EKS, reducing page load latency by 40%.'
-            }
-          ],
-          education: [
-            {
-              degree: 'B.S. Computer Science',
-              institution: 'Stanford University',
-              year: '2019'
-            }
-          ]
+          name: this.user?.name || 'Your Name',
+          email: this.user?.email || 'yourname@example.com',
+          phone: '',
+          location: '',
+          summary: '',
+          skills: [],
+          experience: [],
+          education: []
         },
         themeCustomization: {
-          primaryColor: '#0F172A',
+          primaryColor: '#0f172a',
+          accentColor: '#2563eb',
           secondaryColor: '#475569',
-          accentColor: '#2563EB',
           fontFamily: 'Inter',
           fontSize: 12,
           lineHeight: 1.5,
           margins: 20,
           borderRadius: 4,
           showIcons: true,
-          sectionOrder: ['summary', 'experience', 'skills', 'education'],
-          hiddenSections: [],
-          customSections: []
+          sectionOrder: ['summary', 'experience', 'skills', 'education']
         }
       };
     }
 
-    // Filter categories
-    const categories = ['All', 'Professional', 'Technology', 'Business', 'Creative', 'Research', 'Student', 'Executive', 'ATS 100%', 'Favorites', 'Recently Used', 'Popular', 'Newest'];
-
-    // Load AI recommendation custom matcher based on tech stack
-    let recommendedTheme = themes.find(t => t.key === 'google-professional') || themes[0];
-    let matchPercentage = 98;
-    let matchExplain = 'Your profile indicates strong experience in software systems and structured codebases. We recommend Google Professional for its clean, modern font hierarchy and high 98% ATS parse compatibility.';
-    if (activeResume) {
-      const skills = (activeResume.parsed?.skills || []).map(s => s.toLowerCase());
-      if (skills.some(s => s.includes('research') || s.includes('academic') || s.includes('paper') || s.includes('science'))) {
-        recommendedTheme = themes.find(t => t.key === 'research') || themes.find(t => t.key === 'academic') || recommendedTheme;
-        matchExplain = 'We recommend Research Professional. Academic roles favor structured timelines and publications sections, ensuring maximum compliance with educational review committees.';
-        matchPercentage = 99;
-      } else if (skills.some(s => s.includes('design') || s.includes('creative') || s.includes('ui') || s.includes('ux'))) {
-        recommendedTheme = themes.find(t => t.key === 'creative') || themes.find(t => t.key === 'meta-modern') || recommendedTheme;
-        matchExplain = 'We recommend Creative Portfolio. Creative roles require vibrant, harmonious color schemes and layout spacing to emphasize project presentation and design aesthetics.';
-        matchPercentage = 95;
-      } else if (skills.some(s => s.includes('python') || s.includes('machine learning') || s.includes('data'))) {
-        recommendedTheme = themes.find(t => t.key === 'ai-engineer') || themes.find(t => t.key === 'machine-learning') || recommendedTheme;
-        matchExplain = 'We recommend AI Engineer Resume theme. This custom preset optimizes the layout to showcase model details, technical stacks, and dataset projects.';
-        matchPercentage = 97;
-      } else if (skills.some(s => s.includes('intern') || s.includes('student'))) {
-        recommendedTheme = themes.find(t => t.key === 'student') || themes.find(t => t.key === 'internship') || recommendedTheme;
-        matchExplain = 'We recommend Internship Resume theme. Designed specifically to emphasize education milestones, capstones, extracurricular achievements over core corporate tenure.';
-        matchPercentage = 96;
-      }
-    }
-
-    // Prepare sections builder ordered list
-    const defaultSectionsOrder = ['summary', 'experience', 'skills', 'education', 'projects', 'achievements', 'certificates', 'languages', 'research'];
-    const sectionOrder = activeResume?.themeCustomization?.sectionOrder || defaultSectionsOrder;
-    const hiddenSections = activeResume?.themeCustomization?.hiddenSections || [];
-    const renamedSections = activeResume?.themeCustomization?.renamedSections || {};
-
-    const getSectionDisplayName = (secId) => {
-      return renamedSections[secId] || secId.charAt(0).toUpperCase() + secId.slice(1);
-    };
-
+    const customization = activeResume.themeCustomization || {};
+    const parsed = activeResume.parsed || {};
+    const sectionOrder = customization.sectionOrder || ['summary', 'experience', 'skills', 'education'];
+    const hiddenSections = customization.hiddenSections || [];
+    const getSectionDisplayName = (secId) => secId.charAt(0).toUpperCase() + secId.slice(1);
     const isRecruiterMode = localStorage.getItem('previewMode') === 'recruiter';
 
     return `
-      <!-- Embedded Canvas Premium Custom Styling -->
       <style>
-        .theme-marketplace-workspace {
+        .builder-workspace {
           display: grid;
-          grid-template-columns: 28% 46% 26%;
-          gap: 1.5%;
+          grid-template-columns: 50% 50%;
+          gap: 20px;
           align-items: start;
         }
-        .canvas-btn-group .btn {
-          padding: 8px 16px;
-          border-radius: 6px;
+        .editor-tab-content {
+          display: none;
         }
-        .canvas-btn-group .btn.active {
-          background: var(--primary-color) !important;
-          color: white !important;
-          box-shadow: 0 0 10px rgba(37,99,235,0.4);
+        .editor-tab-content.active {
+          display: block;
         }
-        .control-slider {
-          width: 100%;
-          accent-color: var(--primary-color);
-        }
-        .section-item-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 8px 12px;
-          background: rgba(255,255,255,0.02);
-          border: 1px solid var(--border-color);
-          border-radius: 6px;
-          margin-bottom: 6px;
-        }
-        .theme-gallery-img {
-          width: 100%;
-          height: 120px;
-          object-fit: cover;
-          border-radius: 6px;
-          background: linear-gradient(135deg, #1e293b, #0f172a);
-          border: 1px solid var(--border-color);
-          margin-bottom: 10px;
-        }
-        .scrollable-sidebar {
-          max-height: 85vh;
-          overflow-y: auto;
-          scrollbar-width: thin;
-        }
-        .scrollable-sidebar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .scrollable-sidebar::-webkit-scrollbar-thumb {
-          background: var(--border-color);
+        .ai-inline-btn {
+          background: rgba(37,99,235,0.06);
+          border: 1px solid rgba(37,99,235,0.15);
+          color: var(--primary-color);
+          padding: 2px 6px;
           border-radius: 4px;
+          font-size: 10px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .ai-inline-btn:hover {
+          background: var(--primary-color);
+          color: white;
         }
         #resume-preview-page {
           background: #ffffff;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+          box-shadow: 0 10px 30px rgba(0,0,0,0.15);
           width: 595px;
           min-height: 842px;
           transform-origin: top center;
           transition: all 0.3s ease;
           position: relative;
         }
-        @media print {
-          body * { visibility: hidden; }
-          #resume-preview-page, #resume-preview-page * { visibility: visible; }
-          #resume-preview-page { position: absolute; left: 0; top: 0; }
-        }
       </style>
 
-      <div class="page-header flex justify-between items-center">
+      <div class="page-header flex justify-between items-center mb-6">
         <div>
-          <h2>Enterprise AI Resume Marketplace & Engine</h2>
-          <p class="text-secondary">Fully sandboxed Overleaf & Canva-like resume building environment</p>
+          <h2>AI Resume Builder</h2>
+          <p class="text-secondary">Fully interactive Overleaf & Canva-style builder with live previews</p>
         </div>
         <div class="flex gap-2">
-          <select class="form-select" id="active-resume-select" style="width:250px">
-            ${resumes.map(r => `<option value="${r._id}" ${r._id === selectedResumeId ? 'selected' : ''}>📄 ${r.filename}</option>`).join('') || '<option value="">No Resumes Uploaded</option>'}
+          <button class="btn btn-secondary btn-sm" id="btn-back-landing">✕ Reset Builder</button>
+          <select class="form-select" id="active-resume-select" style="width:220px">
+            ${resumes.map(r => `<option value="${r._id}" ${r._id === selectedResumeId ? 'selected' : ''}>📄 ${r.filename}</option>`).join('')}
           </select>
-          <button class="btn btn-secondary" id="duplicate-variant-btn">Duplicate Variant</button>
         </div>
       </div>
 
-      ${activeResume ? `
-        <!-- THREE-COLUMN CANVA-STYLE THEME BUILDER -->
-        <div class="theme-marketplace-workspace">
-          
-          <!-- COLUMN 1: LOCAL THEME GALLERY -->
-          <div class="card p-4 flex flex-col gap-4 scrollable-sidebar">
-            <div>
-              <h3 class="mb-1">Theme Gallery</h3>
-              <p class="text-secondary text-xs">Instantly apply locally stored layouts</p>
+      <div class="builder-workspace">
+        <div class="card" style="padding: 24px; max-height: 85vh; overflow-y: auto;">
+          <div class="tabs-nav flex gap-1 mb-6 pb-2" style="border-bottom: 1px solid var(--border-color); overflow-x: auto; white-space: nowrap;">
+            <button class="btn btn-ghost btn-xs tab-header-btn active" data-tab="info">Info</button>
+            <button class="btn btn-ghost btn-xs tab-header-btn" data-tab="experience">Experience</button>
+            <button class="btn btn-ghost btn-xs tab-header-btn" data-tab="projects">Projects</button>
+            <button class="btn btn-ghost btn-xs tab-header-btn" data-tab="skills">Skills</button>
+            <button class="btn btn-ghost btn-xs tab-header-btn" data-tab="education">Education</button>
+            <button class="btn btn-ghost btn-xs tab-header-btn" data-tab="theme">Theme</button>
+            <button class="btn btn-ghost btn-xs tab-header-btn" data-tab="ai-assistant">AI Assistant</button>
+            <button class="btn btn-ghost btn-xs tab-header-btn" data-tab="export">Export</button>
+          </div>
+
+          <div class="editor-tab-content active" id="tab-content-info">
+            <h3 class="mb-4">Personal Info</h3>
+            <div class="grid grid-2 gap-4 mb-4">
+              <div class="form-group"><label class="form-label text-xs">Name</label><input class="form-input" id="edit-name" value="${parsed.name || ''}"></div>
+              <div class="form-group"><label class="form-label text-xs">Email</label><input class="form-input" id="edit-email" value="${parsed.email || ''}"></div>
+              <div class="form-group"><label class="form-label text-xs">Phone</label><input class="form-input" id="edit-phone" value="${parsed.phone || ''}"></div>
+              <div class="form-group"><label class="form-label text-xs">Location</label><input class="form-input" id="edit-location" value="${parsed.location || ''}"></div>
             </div>
-            <input class="form-input form-input-sm" id="search-themes-input" placeholder="Search themes (e.g. Google)...">
-            
-            <div class="flex flex-wrap gap-1" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
-              ${categories.map(cat => `
-                <button class="btn btn-secondary btn-xs filter-cat-btn ${cat === 'All' ? 'active' : ''}" data-cat="${cat}" style="font-size:10px; padding: 2px 6px; margin-bottom: 4px;">${cat}</button>
+            <div class="form-group">
+              <div class="flex justify-between items-center mb-1">
+                <label class="form-label text-xs">Summary</label>
+                <div class="flex gap-1">
+                  <button class="ai-inline-btn" data-action="Improve Summary" data-target="edit-summary">✨ Improve</button>
+                  <button class="ai-inline-btn" data-action="Shorten" data-target="edit-summary">Shorten</button>
+                  <button class="ai-inline-btn" data-action="Make Professional" data-target="edit-summary">💼 Prof.</button>
+                </div>
+              </div>
+              <textarea class="form-textarea" id="edit-summary" style="min-height: 120px;">${parsed.summary || ''}</textarea>
+            </div>
+            <button class="btn btn-primary btn-sm mt-4 w-full" id="save-content-info-btn">Save Progress</button>
+          </div>
+
+          <div class="editor-tab-content" id="tab-content-experience">
+            <div class="flex justify-between items-center mb-4">
+              <h3>Work History</h3>
+              <button class="btn btn-secondary btn-xs" id="add-exp-btn">+ Add Role</button>
+            </div>
+            <div id="experience-edit-list" class="flex flex-col gap-4">
+              ${(parsed.experience || []).map((exp, idx) => `
+                <div class="card p-3 exp-edit-row" style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color);">
+                  <div class="grid grid-2 gap-2 mb-2">
+                    <div class="form-group"><label class="form-label text-xs">Role</label><input class="form-input exp-role" value="${exp.role || ''}"></div>
+                    <div class="form-group"><label class="form-label text-xs">Company</label><input class="form-input exp-company" value="${exp.company || ''}"></div>
+                    <div class="form-group"><label class="form-label text-xs">Start Date</label><input class="form-input exp-start" value="${exp.startDate || ''}"></div>
+                    <div class="form-group"><label class="form-label text-xs">End Date</label><input class="form-input exp-end" value="${exp.endDate || ''}"></div>
+                  </div>
+                  <div class="form-group">
+                    <div class="flex justify-between items-center mb-1">
+                      <label class="form-label text-xs">Description</label>
+                      <div class="flex gap-1">
+                        <button class="ai-inline-btn" data-action="Improve Bullet Points" data-target="exp-desc-${idx}">✨ Improve</button>
+                        <button class="ai-inline-btn" data-action="Make Technical" data-target="exp-desc-${idx}">💻 Tech</button>
+                      </div>
+                    </div>
+                    <textarea class="form-textarea exp-desc" id="exp-desc-${idx}" style="min-height: 80px;">${exp.description || ''}</textarea>
+                  </div>
+                  <button class="btn btn-danger btn-xs mt-2 delete-exp-btn">Remove</button>
+                </div>
               `).join('')}
             </div>
+            <button class="btn btn-primary btn-sm mt-4 w-full" id="save-content-exp-btn">Save Progress</button>
+          </div>
 
-            <div class="flex flex-col gap-3" id="gallery-list-container">
-              ${themes.map((t) => {
-                const isFav = activeResume.favorites?.includes(t.id);
-                return `
-                  <div class="p-3 rounded glass-card hover-lift theme-item-card" 
-                       data-theme-key="${t.key}" 
-                       data-theme-name="${t.name.toLowerCase()}" 
-                       data-theme-cat="${t.category}" 
-                       data-theme-ats="${t.atsScore}"
-                       data-theme-popularity="${t.popularity}"
-                       data-theme-id="${t.id}"
-                       data-theme-fav="${isFav}"
-                       style="border: 1px solid var(--border-color)">
-                    
-                    <div class="theme-gallery-img" style="display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;">
-                      <img src="/resume-themes/themes/${t.key}/preview.png" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top:0; left:0;" alt="${t.name}">
+          <div class="editor-tab-content" id="tab-content-projects">
+            <div class="flex justify-between items-center mb-4">
+              <h3>Projects</h3>
+              <button class="btn btn-secondary btn-xs" id="add-project-btn">+ Add Project</button>
+            </div>
+            <div id="projects-edit-list" class="flex flex-col gap-4">
+              ${(parsed.projects || []).map((proj, idx) => `
+                <div class="card p-3 proj-edit-row" style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color);">
+                  <div class="form-group mb-2"><label class="form-label text-xs">Project Title</label><input class="form-input proj-title" value="${proj.title || ''}"></div>
+                  <div class="form-group mb-2"><label class="form-label text-xs">Technologies (comma separated)</label><input class="form-input proj-tech" value="${(proj.technologiesUsed || []).join(', ') || ''}"></div>
+                  <div class="form-group">
+                    <div class="flex justify-between items-center mb-1">
+                      <label class="form-label text-xs">Description</label>
+                      <div class="flex gap-1">
+                        <button class="ai-inline-btn" data-action="Improve Bullet Points" data-target="proj-desc-${idx}">✨ Improve</button>
+                      </div>
                     </div>
-
-                    <div class="flex justify-between items-start mb-1">
-                      <strong style="font-size: 13px;">${t.name}</strong>
-                      <span class="badge badge-success" style="font-size: 9px; padding: 1px 4px;">${t.atsScore}% ATS</span>
-                    </div>
-                    <p class="text-xs text-secondary mb-1" style="margin:0">${t.bestFor}</p>
-                    
-                    <div class="flex items-center justify-between text-xs text-muted mb-2">
-                      <span>👍 ${t.popularity} pop</span>
-                      <span>📥 ${t.downloads} downloads</span>
-                    </div>
-
-                    <div class="flex gap-2">
-                      <button class="btn btn-primary btn-xs flex-1" style="font-size:10px; padding: 3px;" data-apply-theme-name="${t.name}">Apply</button>
-                      <button class="btn btn-secondary btn-xs" style="font-size:10px; padding: 3px;" data-preview-theme-key="${t.key}">Preview</button>
-                      <button class="btn btn-ghost btn-xs favorite-theme-btn" data-theme-fav-id="${t.id}" style="padding: 2px;">
-                        ${isFav ? '❤️' : '🤍'}
-                      </button>
-                    </div>
+                    <textarea class="form-textarea proj-desc" id="proj-desc-${idx}" style="min-height: 80px;">${proj.description || ''}</textarea>
                   </div>
-                `;
-              }).join('')}
+                  <button class="btn btn-danger btn-xs mt-2 delete-proj-btn">Remove</button>
+                </div>
+              `).join('')}
+            </div>
+            <button class="btn btn-primary btn-sm mt-4 w-full" id="save-content-proj-btn">Save Progress</button>
+          </div>
+
+          <div class="editor-tab-content" id="tab-content-skills">
+            <h3 class="mb-4">Skills</h3>
+            <div class="form-group mb-4">
+              <div class="flex justify-between items-center mb-1">
+                <label class="form-label text-xs">Skills (Comma separated)</label>
+                <button class="ai-inline-btn" data-action="Optimize Skills" data-target="edit-skills">✨ AI Optimize</button>
+              </div>
+              <textarea class="form-textarea" id="edit-skills" style="min-height: 120px;">${(parsed.skills || []).join(', ') || ''}</textarea>
+            </div>
+            <button class="btn btn-primary btn-sm mt-4 w-full" id="save-content-skills-btn">Save Progress</button>
+          </div>
+
+          <div class="editor-tab-content" id="tab-content-education">
+            <div class="flex justify-between items-center mb-4">
+              <h3>Education</h3>
+              <button class="btn btn-secondary btn-xs" id="add-edu-btn">+ Add Edu</button>
+            </div>
+            <div id="education-edit-list" class="flex flex-col gap-4">
+              ${(parsed.education || []).map(edu => `
+                <div class="card p-3 edu-edit-row" style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color);">
+                  <div class="grid grid-3 gap-2">
+                    <div class="form-group"><label class="form-label text-xs">Institution</label><input class="form-input edu-inst" value="${edu.institution || ''}"></div>
+                    <div class="form-group"><label class="form-label text-xs">Degree</label><input class="form-input edu-degree" value="${edu.degree || ''}"></div>
+                    <div class="form-group"><label class="form-label text-xs">Year</label><input class="form-input edu-year" value="${edu.year || ''}"></div>
+                  </div>
+                  <button class="btn btn-danger btn-xs mt-2 delete-edu-btn">Remove</button>
+                </div>
+              `).join('')}
+            </div>
+            <button class="btn btn-primary btn-sm mt-4 w-full" id="save-content-edu-btn">Save Progress</button>
+          </div>
+
+          <div class="editor-tab-content" id="tab-content-theme">
+            <h3 class="mb-4">Resume Themes & Custom Styles</h3>
+            
+            <div class="mb-6">
+              <h4 class="mb-2 text-xs text-muted">Theme Presets</h4>
+              <div class="grid grid-3 gap-2">
+                ${['Modern', 'Minimal', 'Professional', 'Corporate', 'Creative', 'Developer', 'Executive', 'ATS Friendly', 'Classic', 'Dark'].map(preset => `
+                  <button class="btn btn-secondary btn-xs preset-theme-btn" data-preset="${preset.toLowerCase().replace(/\s+/g, '-')}">${preset}</button>
+                `).join('')}
+              </div>
+            </div>
+
+            <form id="theme-customizer-form" class="flex flex-col gap-4 text-xs">
+              <div class="grid grid-3 gap-2">
+                <div class="form-group">
+                  <label class="form-label text-xs">Accent</label>
+                  <input type="color" class="form-input" style="height:32px; padding:2px;" name="accentColor" value="${customization.accentColor || '#2563eb'}">
+                </div>
+                <div class="form-group">
+                  <label class="form-label text-xs">Primary Color</label>
+                  <input type="color" class="form-input" style="height:32px; padding:2px;" name="primaryColor" value="${customization.primaryColor || '#0f172a'}">
+                </div>
+                <div class="form-group">
+                  <label class="form-label text-xs">Secondary</label>
+                  <input type="color" class="form-input" style="height:32px; padding:2px;" name="secondaryColor" value="${customization.secondaryColor || '#475569'}">
+                </div>
+              </div>
+
+              <div class="grid grid-2 gap-2">
+                <div class="form-group">
+                  <label class="form-label text-xs">Font Family</label>
+                  <select class="form-select" name="fontFamily">
+                    <option value="Inter" ${customization.fontFamily === 'Inter' ? 'selected' : ''}>Inter (Sans)</option>
+                    <option value="Roboto" ${customization.fontFamily === 'Roboto' ? 'selected' : ''}>Roboto (Sans)</option>
+                    <option value="Lora" ${customization.fontFamily === 'Lora' ? 'selected' : ''}>Lora (Serif)</option>
+                    <option value="Fira Code" ${customization.fontFamily === 'Fira Code' ? 'selected' : ''}>Fira Code (Mono)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label text-xs">Font Size (px)</label>
+                  <input type="number" class="form-input" name="fontSize" min="8" max="24" value="${customization.fontSize || 12}">
+                </div>
+              </div>
+
+              <div class="grid grid-2 gap-2">
+                <div class="form-group">
+                  <label class="form-label text-xs">Line Height</label>
+                  <input type="number" class="form-input" name="lineHeight" step="0.1" min="1" max="2.5" value="${customization.lineHeight || 1.5}">
+                </div>
+                <div class="form-group">
+                  <label class="form-label text-xs">Margins (px)</label>
+                  <input type="number" class="form-input" name="margins" min="5" max="60" value="${customization.margins || 20}">
+                </div>
+              </div>
+
+              <div class="grid grid-2 gap-2">
+                <div class="form-group">
+                  <label class="form-label text-xs">Border Radius</label>
+                  <input type="number" class="form-input" name="borderRadius" min="0" max="20" value="${customization.borderRadius || 4}">
+                </div>
+                <div class="form-group">
+                  <label class="form-label text-xs">Page Size</label>
+                  <select class="form-select" name="pageSize">
+                    <option value="A4" ${customization.pageSize === 'A4' ? 'selected' : ''}>A4 Standard</option>
+                    <option value="Letter" ${customization.pageSize === 'Letter' ? 'selected' : ''}>US Letter</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="card p-3 mt-2" style="background: rgba(255,255,255,0.01); border:1px solid var(--border-color);">
+                <h4 class="mb-2 text-xs font-semibold">Section Visibility</h4>
+                <div class="flex flex-col gap-2">
+                  ${sectionOrder.map(secId => {
+                    const isHidden = hiddenSections.includes(secId);
+                    return `
+                      <label class="flex items-center gap-2">
+                        <input type="checkbox" class="sec-vis-checkbox" data-sec-id="${secId}" ${!isHidden ? 'checked' : ''}>
+                        <span>${getSectionDisplayName(secId)}</span>
+                      </label>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-sm w-full mt-2">Save theme styles</button>
+            </form>
+          </div>
+
+          <div class="editor-tab-content" id="tab-content-ai-assistant">
+            <h3 class="mb-4">AI Builder Copilot</h3>
+            <p class="text-secondary text-xs mb-4">Leverage Gemini to audit and optimize your entire resume structure.</p>
+            <div class="flex flex-col gap-3">
+              <button class="btn btn-secondary btn-sm w-full text-left" id="ai-improve-resume-btn">🪄 One-click Professional Rewrite</button>
+              <button class="btn btn-secondary btn-sm w-full text-left" id="ai-optimize-ats-btn">🔍 Optimize ATS Keyword Match</button>
+              <button class="btn btn-secondary btn-sm w-full text-left" id="ai-grammar-check-btn">✅ Run Grammar & Polish Check</button>
+            </div>
+            
+            <div class="form-group mt-4">
+              <label class="form-label text-xs">Tailor Resume for Job</label>
+              <textarea class="form-textarea form-textarea-sm" id="ai-tailor-jd" placeholder="Paste target job description here..." style="min-height: 80px;"></textarea>
+              <button class="btn btn-primary btn-xs w-full mt-2" id="ai-run-tailor-btn">Tailor Resume for Job</button>
+            </div>
+            <div id="ai-copilot-feedback" class="hidden mt-3 p-3 rounded text-xs" style="background: rgba(37,99,235,0.06); border: 1px solid var(--primary-color);"></div>
+          </div>
+
+          <div class="editor-tab-content" id="tab-content-export">
+            <h3 class="mb-4">Export & Variants</h3>
+            <div class="flex flex-col gap-3 mb-6">
+              <button class="btn btn-primary btn-sm w-full" id="exp-pdf-btn">Export PDF</button>
+              <button class="btn btn-secondary btn-sm w-full" id="exp-docx-btn">Export DOCX</button>
+              <button class="btn btn-secondary btn-sm w-full" id="exp-html-btn">Export HTML (Single Page)</button>
+            </div>
+
+            <div class="card p-3 text-xs" style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color);">
+              <h4 class="mb-2 font-semibold">Variant Management</h4>
+              <button class="btn btn-secondary btn-xs w-full mb-2" id="duplicate-variant-btn">Duplicate Resume Variant</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="padding: 24px; display: flex; flex-direction: column; align-items: center; background: var(--bg-secondary); max-height: 85vh; overflow-y: auto;">
+          <div class="flex justify-between items-center w-full mb-4 pb-2" style="border-bottom: 1px solid var(--border-color)">
+            <div class="flex gap-2">
+              <button class="btn btn-ghost btn-xs active" id="btn-mode-candidate">Candidate Preview</button>
+              <button class="btn btn-ghost btn-xs" id="btn-mode-recruiter">Recruiter View</button>
+            </div>
+            <div class="flex gap-1 items-center">
+              <button class="btn btn-ghost btn-xs" id="zoom-out-btn">➖</button>
+              <span id="zoom-percent-text" style="font-size:11px; width:40px; text-align:center;">90%</span>
+              <button class="btn btn-ghost btn-xs" id="zoom-in-btn">➕</button>
             </div>
           </div>
 
-          <!-- COLUMN 2: SANDBOXED LIVE RESUME PREVIEW -->
-          <div class="flex flex-col gap-4">
-            <div class="card p-3 flex justify-between items-center" style="background:var(--bg-secondary)">
-              <div class="flex gap-2 items-center">
-                <button class="btn btn-sm btn-secondary" id="zoom-out-btn">-</button>
-                <span class="text-xs" id="zoom-indicator">100%</span>
-                <button class="btn btn-sm btn-secondary" id="zoom-in-btn">+</button>
-              </div>
+          <div style="background:#0F172A; padding:24px 12px; display:flex; justify-content:center; width:100%; border-radius: 8px; overflow-x:auto;">
+            <div id="preview-candidate-view" style="display: ${!isRecruiterMode ? 'block' : 'none'};">
+              <div id="resume-preview-page" style="
+                background:#FFFFFF; 
+                color:${customization.primaryColor || '#0f172a'}; 
+                font-family:${customization.fontFamily === 'Lora' ? 'Georgia, serif' : (customization.fontFamily === 'Fira Code' ? 'monospace' : 'system-ui')}; 
+                font-size:${customization.fontSize || 12}px; 
+                line-height:${customization.lineHeight || 1.5}; 
+                padding:${customization.margins || 20}px; 
+                border-radius:${customization.borderRadius || 4}px;
+                transform: scale(0.9);
+              ">
+                <div style="
+                  border-bottom: 2px solid ${customization.accentColor || '#2563eb'}; 
+                  padding-bottom: 16px; 
+                  margin-bottom: 16px; 
+                  display: flex;
+                  align-items: center;
+                  gap: 16px;
+                ">
+                  <div style="flex: 1;">
+                    <h1 style="margin:0 0 4px 0; font-size: 2.2rem; font-weight: 700; color:${customization.primaryColor || '#0f172a'};">${parsed.name || 'Your Name'}</h1>
+                    <div style="color:${customization.secondaryColor || '#475569'}; font-size:12px;">
+                      ${customization.showIcons ? '📧 ' : ''}${parsed.email || ''} | 
+                      ${customization.showIcons ? '📱 ' : ''}${parsed.phone || ''} | 
+                      ${customization.showIcons ? '📍 ' : ''}${parsed.location || ''}
+                    </div>
+                  </div>
+                </div>
 
-              <!-- Candidate/Recruiter view tabs -->
-              <div class="canvas-btn-group flex gap-1" style="background: rgba(0,0,0,0.2); padding: 2px; border-radius: 6px;">
-                <button class="btn btn-xs ${!isRecruiterMode ? 'active' : ''}" id="btn-mode-candidate" style="font-size: 11px;">Candidate View</button>
-                <button class="btn btn-xs ${isRecruiterMode ? 'active' : ''}" id="btn-mode-recruiter" style="font-size: 11px;">Recruiter View</button>
-              </div>
+                ${sectionOrder.map(secId => {
+                  if (hiddenSections.includes(secId)) return '';
+                  
+                  if (secId === 'summary' && parsed.summary) {
+                    return `
+                      <div style="margin-bottom: 16px;">
+                        <h3 style="color:\${customization.accentColor || '#2563eb'}; margin: 0 0 6px 0; font-size: 1.1rem; text-transform: uppercase;">\${getSectionDisplayName('summary')}</h3>
+                        <p style="margin: 0; color:\${customization.primaryColor || '#0f172a'}">\${parsed.summary}</p>
+                      </div>
+                    `;
+                  }
 
-              <div class="flex gap-1">
-                <button class="btn btn-sm btn-secondary" id="prev-theme-btn">◀</button>
-                <button class="btn btn-sm btn-secondary" id="next-theme-btn">▶</button>
+                  if (secId === 'experience' && parsed.experience?.length) {
+                    return `
+                      <div style="margin-bottom: 16px;">
+                        <h3 style="color:\${customization.accentColor || '#2563eb'}; margin: 0 0 8px 0; font-size: 1.1rem; text-transform: uppercase;">\${getSectionDisplayName('experience')}</h3>
+                        \${parsed.experience.map(exp => \`
+                          <div style="margin-bottom: 12px;">
+                            <div style="display:flex; justify-content:space-between; font-weight:600;">
+                              <span>\${exp.role} — \${exp.company}</span>
+                              <span style="font-size:11px; color:\${customization.secondaryColor || '#475569'}">\${exp.startDate} - \${exp.endDate}</span>
+                            </div>
+                            <p style="margin: 4px 0 0 0; color:\${customization.secondaryColor || '#475569'}">\${exp.description}</p>
+                          </div>
+                        \`).join('')}
+                      </div>
+                    `;
+                  }
+
+                  if (secId === 'skills' && parsed.skills?.length) {
+                    return `
+                      <div style="margin-bottom: 16px;">
+                        <h3 style="color:\${customization.accentColor || '#2563eb'}; margin: 0 0 8px 0; font-size: 1.1rem; text-transform: uppercase;">\${getSectionDisplayName('skills')}</h3>
+                        <div style="display:flex; flex-wrap:wrap; gap: 6px;">
+                          \${parsed.skills.map(skill => \`
+                            <span style="font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid \${customization.accentColor || '#2563eb'}; color:\${customization.accentColor || '#2563eb'}; font-weight:500;">
+                              \${skill}
+                            </span>
+                          \`).join('')}
+                        </div>
+                      </div>
+                    `;
+                  }
+
+                  if (secId === 'education' && parsed.education?.length) {
+                    return `
+                      <div style="margin-bottom: 16px;">
+                        <h3 style="color:\${customization.accentColor || '#2563eb'}; margin: 0 0 8px 0; font-size: 1.1rem; text-transform: uppercase;">\${getSectionDisplayName('education')}</h3>
+                        \${parsed.education.map(edu => \`
+                          <div style="display:flex; justify-content:space-between; font-weight:600; margin-bottom: 4px;">
+                            <span>\${edu.degree} — \${edu.institution}</span>
+                            <span style="font-size:11px; color:\${customization.secondaryColor || '#475569'}">\${edu.year}</span>
+                          </div>
+                        \`).join('')}
+                      </div>
+                    `;
+                  }
+                  return '';
+                }).join('')}
               </div>
             </div>
 
-            <!-- Resume Preview Paper Container -->
-            <div style="background:#0F172A; padding:32px 16px; display:flex; justify-content:center; overflow-x:auto; border-radius: 8px; border: 1px solid var(--border-color); min-height: 80vh;">
-              
-              <!-- Candidate View rendering -->
-              <div id="preview-candidate-view" style="display: ${!isRecruiterMode ? 'block' : 'none'};">
-                <div id="resume-preview-page" style="
-                  background:#FFFFFF; 
-                  color:${activeResume.themeCustomization?.primaryColor || '#0F172A'}; 
-                  font-family:${activeResume.themeCustomization?.fontFamily === 'Lora' ? 'Georgia, serif' : (activeResume.themeCustomization?.fontFamily === 'Fira Code' ? 'monospace' : 'system-ui')}; 
-                  font-size:${activeResume.themeCustomization?.fontSize || 12}px; 
-                  line-height:${activeResume.themeCustomization?.lineHeight || 1.5}; 
-                  padding:${activeResume.themeCustomization?.margins || 20}px; 
-                  border-radius:${activeResume.themeCustomization?.borderRadius || 4}px;
-                ">
-                  <!-- Header block based on customizable Header Style & Sidebar Position -->
-                  <div style="
-                    border-bottom: 2px solid ${activeResume.themeCustomization?.accentColor || '#2563EB'}; 
-                    padding-bottom: 16px; 
-                    margin-bottom: 16px; 
-                    display: flex;
-                    align-items: center;
-                    gap: 16px;
-                    text-align: ${activeResume.themeCustomization?.headerStyle === 'centered' ? 'center' : 'left'};
-                    flex-direction: ${activeResume.themeCustomization?.headerStyle === 'centered' ? 'column' : 'row'};
-                  ">
-                    ${activeResume.themeCustomization?.profilePictureUrl ? `
-                      <img src="${activeResume.themeCustomization.profilePictureUrl}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid ${activeResume.themeCustomization?.accentColor || '#2563EB'};">
-                    ` : ''}
-                    <div style="flex: 1;">
-                      <h1 style="margin:0 0 4px 0; font-size: 2.2rem; font-weight: 700; color:${activeResume.themeCustomization?.primaryColor || '#0F172A'};">${activeResume.parsed?.name || 'Your Name'}</h1>
-                      <div style="color:${activeResume.themeCustomization?.secondaryColor || '#475569'}; font-size:12px;">
-                        ${activeResume.themeCustomization?.showIcons ? '📧 ' : ''}${activeResume.parsed?.email || ''} | 
-                        ${activeResume.themeCustomization?.showIcons ? '📱 ' : ''}${activeResume.parsed?.phone || ''} | 
-                        ${activeResume.themeCustomization?.showIcons ? '📍 ' : ''}${activeResume.parsed?.location || ''}
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Ordered dynamic section loop (Section Builder) -->
-                  ${sectionOrder.map(secId => {
-                    if (hiddenSections.includes(secId)) return '';
-                    
-                    if (secId === 'summary' && activeResume.parsed?.summary) {
-                      return `
-                        <div style="margin-bottom: 16px;">
-                          <h3 style="color:${activeResume.themeCustomization?.accentColor || '#2563EB'}; margin: 0 0 6px 0; font-size: 1.1rem; text-transform: uppercase;">${getSectionDisplayName('summary')}</h3>
-                          <p style="margin: 0; color:${activeResume.themeCustomization?.primaryColor || '#0F172A'}">${activeResume.parsed.summary}</p>
-                        </div>
-                      `;
-                    }
-
-                    if (secId === 'experience' && activeResume.parsed?.experience?.length) {
-                      return `
-                        <div style="margin-bottom: 16px;">
-                          <h3 style="color:${activeResume.themeCustomization?.accentColor || '#2563EB'}; margin: 0 0 8px 0; font-size: 1.1rem; text-transform: uppercase;">${getSectionDisplayName('experience')}</h3>
-                          ${activeResume.parsed.experience.map(exp => `
-                            <div style="margin-bottom: 12px;">
-                              <div style="display:flex; justify-content:space-between; font-weight:600;">
-                                <span>${exp.role} — ${exp.company}</span>
-                                <span style="font-size:11px; color:${activeResume.themeCustomization?.secondaryColor || '#475569'}">${exp.startDate} - ${exp.endDate}</span>
-                              </div>
-                              <p style="margin: 4px 0 0 0; color:${activeResume.themeCustomization?.secondaryColor || '#475569'}">${exp.description}</p>
-                            </div>
-                          `).join('')}
-                        </div>
-                      `;
-                    }
-
-                    if (secId === 'skills' && activeResume.parsed?.skills?.length) {
-                      return `
-                        <div style="margin-bottom: 16px;">
-                          <h3 style="color:${activeResume.themeCustomization?.accentColor || '#2563EB'}; margin: 0 0 8px 0; font-size: 1.1rem; text-transform: uppercase;">${getSectionDisplayName('skills')}</h3>
-                          <div style="display:flex; flex-wrap:wrap; gap: 6px;">
-                            ${activeResume.parsed.skills.map(skill => `
-                              <span style="font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid ${activeResume.themeCustomization?.accentColor || '#2563EB'}; color:${activeResume.themeCustomization?.accentColor || '#2563EB'}; font-weight:500;">
-                                ${skill}
-                              </span>
-                            `).join('')}
-                          </div>
-                        </div>
-                      `;
-                    }
-
-                    if (secId === 'education' && activeResume.parsed?.education?.length) {
-                      return `
-                        <div style="margin-bottom: 16px;">
-                          <h3 style="color:${activeResume.themeCustomization?.accentColor || '#2563EB'}; margin: 0 0 8px 0; font-size: 1.1rem; text-transform: uppercase;">${getSectionDisplayName('education')}</h3>
-                          ${activeResume.parsed.education.map(edu => `
-                            <div style="display:flex; justify-content:space-between; font-weight:600; margin-bottom: 4px;">
-                              <span>${edu.degree} — ${edu.institution}</span>
-                              <span style="font-size:11px; color:${activeResume.themeCustomization?.secondaryColor || '#475569'}">${edu.year}</span>
-                            </div>
-                          `).join('')}
-                        </div>
-                      `;
-                    }
-
-                    return '';
-                  }).join('')}
-
-                  <!-- Custom sections injected -->
-                  ${activeResume.themeCustomization?.customSections?.map(cs => `
-                    <div style="margin-bottom: 16px;">
-                      <h3 style="color:${activeResume.themeCustomization?.accentColor || '#2563EB'}; margin: 0 0 6px 0; font-size: 1.1rem; text-transform: uppercase;">${cs.title}</h3>
-                      <p style="margin:0; color:${activeResume.themeCustomization?.primaryColor || '#0F172A'}">${cs.content}</p>
-                    </div>
-                  `).join('') || ''}
-                </div>
-              </div>
-
-              <!-- Recruiter Analysis Preview View -->
-              <div id="preview-recruiter-view" style="display: ${isRecruiterMode ? 'block' : 'none'}; width: 595px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 24px; color: var(--text-color);">
-                <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 20px;">
-                  <h3 style="margin:0;">🔍 Recruiter Assessment Portal</h3>
-                  <p class="text-secondary text-xs mt-1">AI-parsed structure & resume keywords quality checklist</p>
-                </div>
-
+            <div id="preview-recruiter-view" style="display: ${isRecruiterMode ? 'block' : 'none'}; width:100%;">
+              <div class="card p-4 text-xs" style="background:#1e293b; color: #fff;">
                 <div class="mb-4 flex items-center justify-between p-3 rounded" style="background: rgba(37,99,235,0.06); border: 1px solid var(--primary-color)">
                   <div>
                     <div class="text-xs text-secondary">Resume Strength Index</div>
@@ -3105,223 +3509,484 @@ const CandidateDashboard = {
                   </div>
                   <span class="badge badge-success">Highly Compatible</span>
                 </div>
-
                 <div class="mb-4">
-                  <h4 class="mb-2" style="font-size: 13px;">ATS Parsed View & Keyword Highlights</h4>
-                  <div style="max-height: 200px; overflow-y:auto; padding:12px; border-radius:6px; border:1px solid var(--border-color); background: rgba(0,0,0,0.3); font-family: monospace; font-size: 11px;">
-                    <span style="color:var(--text-color);">${activeResume.parsed?.summary || ''}</span>
-                    <hr style="border-color:var(--border-color); margin: 8px 0;">
-                    <div>
-                      <strong>Extracted Skills:</strong><br>
-                      ${(activeResume.parsed?.skills || []).map(s => {
-                        const isMatch = ['javascript', 'python', 'docker', 'react', 'kubernetes', 'aws'].includes(s.toLowerCase());
-                        return `<span style="color: ${isMatch ? '#10B981' : '#EAB308'}; font-weight: bold; margin-right: 6px;">${s}</span>`;
-                      }).join(', ')}
-                    </div>
+                  <h4 class="mb-2">ATS Extracted Data & Keywords</h4>
+                  <div style="max-height: 180px; overflow-y:auto; padding:10px; border-radius:6px; background:#0f172a; font-family:monospace; line-height: 1.4;">
+                    <strong>Summary:</strong> ${parsed.summary || 'None'}<br><br>
+                    <strong>Keywords:</strong> ${(parsed.skills || []).join(', ')}
                   </div>
                 </div>
-
-                <div class="grid grid-2 gap-4">
-                  <div>
-                    <h5 class="text-success mb-1">✓ Core Strengths</h5>
-                    <ul class="text-xs text-secondary pl-4" style="list-style-type: disc;">
-                      <li>Strong technical skill density</li>
-                      <li>Clarity of role descriptions</li>
-                      <li>ATS friendly header structuring</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h5 class="text-warning mb-1">⚠ Identified Weaknesses</h5>
-                    <ul class="text-xs text-secondary pl-4" style="list-style-type: disc;">
-                      <li>Missing social link validation</li>
-                      <li>Summary contains buzzwords</li>
-                      <li>Education section lacks GPA</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            <!-- Export Bar -->
-            <div class="card p-4">
-              <h4 class="mb-3">Download & Export Options</h4>
-              <div class="grid grid-6 gap-2">
-                <button class="btn btn-secondary btn-sm" id="exp-pdf-btn">Export PDF</button>
-                <button class="btn btn-secondary btn-sm" id="exp-docx-btn">Export DOCX</button>
-                <button class="btn btn-secondary btn-sm" id="exp-html-btn">Export HTML</button>
-                <button class="btn btn-secondary btn-sm" id="exp-md-btn">Markdown</button>
-                <button class="btn btn-secondary btn-sm" id="exp-json-btn">JSON Schema</button>
-                <button class="btn btn-secondary btn-sm" id="exp-png-btn">SVG Snapshot</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- COLUMN 3: CUSTOMIZATION PANEL & AI RECOMMENDATIONS -->
-          <div class="flex flex-col gap-6 scrollable-sidebar">
-            
-            <!-- AI Recommendation Card -->
-            <div class="card" style="background:var(--bg-secondary); border: 1px dashed var(--primary-color)">
-              <h3 class="mb-2">AI Theme Recommendation</h3>
-              <div style="font-size:11px; margin-bottom:8px;">
-                🤖 Recommended Theme: <strong>${recommendedTheme.name}</strong><br>
-                Industry Match: <strong>${matchPercentage}%</strong> | ATS: <strong>${recommendedTheme.atsScore}%</strong>
-              </div>
-              <p class="text-secondary" style="font-size:11.5px; line-height:1.4; margin:0">
-                <strong>Why?</strong> ${matchExplain}
-              </p>
-            </div>
-
-            <!-- Job Description Optimizer -->
-            <div class="card">
-              <h3 class="mb-2">ATS JD Optimizer</h3>
-              <p class="text-xs text-secondary mb-3">Paste a job description to identify missing skill keywords</p>
-              <textarea class="form-textarea form-textarea-sm" style="font-size:11px; min-height:60px;" id="jd-optimizer-textarea" placeholder="Paste target job description here..."></textarea>
-              <button class="btn btn-primary btn-xs w-full mt-2" id="run-jd-optimizer-btn">Analyze & Tailor</button>
-              <div class="hidden mt-3 p-2 rounded text-xs" id="jd-optimizer-feedback" style="background: rgba(37,99,235,0.1); border:1px solid var(--primary-color)"></div>
-            </div>
-
-            <!-- AI Theme Generator Prompt -->
-            <div class="card">
-              <h3 class="mb-2">AI Design Generator</h3>
-              <p class="text-xs text-secondary mb-3">Describe a style (e.g. "Create a minimal layout inspired by Apple's design")</p>
-              <input class="form-input form-input-sm" id="ai-generator-prompt" placeholder="e.g. Apple minimalist modern Serif...">
-              <button class="btn btn-secondary btn-xs w-full mt-2" id="run-ai-theme-generator-btn">Generate Style</button>
-            </div>
-
-            <!-- SECTION BUILDER -->
-            <div class="card">
-              <h3 class="mb-2">Section Manager (Drag & Reorder)</h3>
-              <p class="text-xs text-secondary mb-3">Arrange, rename or hide resume sections</p>
-              <div class="flex flex-col gap-1">
-                ${sectionOrder.map(secId => {
-                  const isHidden = hiddenSections.includes(secId);
-                  return `
-                    <div class="section-item-row" style="opacity: ${isHidden ? 0.5 : 1};">
-                      <span style="font-weight: 500;">${getSectionDisplayName(secId)}</span>
-                      <div class="flex gap-1">
-                        <button class="btn btn-ghost btn-xs move-sec-btn" data-sec-id="${secId}" data-dir="up">▲</button>
-                        <button class="btn btn-ghost btn-xs move-sec-btn" data-sec-id="${secId}" data-dir="down">▼</button>
-                        <button class="btn btn-ghost btn-xs rename-sec-btn" data-sec-id="${secId}">✏</button>
-                        <button class="btn btn-ghost btn-xs toggle-sec-visibility" data-sec-id="${secId}">${isHidden ? '👁' : '❌'}</button>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-              <button class="btn btn-secondary btn-xs w-full mt-3" id="add-custom-sec-btn">+ Add Custom Section</button>
-            </div>
-
-            <!-- Visual customizer sliders/colors -->
-            <div class="card">
-              <h3 class="mb-3">Visual Style Options</h3>
-              <form id="theme-customizer-form" class="flex flex-col gap-3 text-xs">
-                
-                <div class="form-group">
-                  <label class="form-label text-xs">Profile Picture</label>
-                  <input type="file" id="upload-profile-pic-btn" class="form-input" style="font-size:11px;" accept="image/*">
-                </div>
-
-                <div class="grid grid-3 gap-2">
-                  <div class="form-group">
-                    <label class="form-label text-xs">Accent</label>
-                    <input type="color" class="form-input" style="height:32px; padding:2px;" name="accentColor" value="${activeResume.themeCustomization?.accentColor || '#2563EB'}">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label text-xs">Primary</label>
-                    <input type="color" class="form-input" style="height:32px; padding:2px;" name="primaryColor" value="${activeResume.themeCustomization?.primaryColor || '#0F172A'}">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label text-xs">Secondary</label>
-                    <input type="color" class="form-input" style="height:32px; padding:2px;" name="secondaryColor" value="${activeResume.themeCustomization?.secondaryColor || '#475569'}">
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label text-xs">Header Style</label>
-                  <select class="form-select" name="headerStyle">
-                    <option value="centered" ${activeResume.themeCustomization?.headerStyle === 'centered' ? 'selected' : ''}>Centered Header</option>
-                    <option value="left" ${activeResume.themeCustomization?.headerStyle === 'left' ? 'selected' : ''}>Left Header</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label text-xs">Font Family</label>
-                  <select class="form-select" name="fontFamily">
-                    <option value="Inter" ${activeResume.themeCustomization?.fontFamily === 'Inter' ? 'selected' : ''}>Inter (Sans)</option>
-                    <option value="Roboto" ${activeResume.themeCustomization?.fontFamily === 'Roboto' ? 'selected' : ''}>Roboto (Sans)</option>
-                    <option value="Lora" ${activeResume.themeCustomization?.fontFamily === 'Lora' ? 'selected' : ''}>Lora (Serif)</option>
-                    <option value="Fira Code" ${activeResume.themeCustomization?.fontFamily === 'Fira Code' ? 'selected' : ''}>Fira Code (Mono)</option>
-                  </select>
-                </div>
-
-                <div class="grid grid-2 gap-2">
-                  <div class="form-group">
-                    <label class="form-label text-xs">Font Size (px)</label>
-                    <input type="number" class="form-input" name="fontSize" min="8" max="24" value="${activeResume.themeCustomization?.fontSize || 12}">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label text-xs">Line Height</label>
-                    <input type="number" class="form-input" name="lineHeight" step="0.1" min="1" max="2.5" value="${activeResume.themeCustomization?.lineHeight || 1.5}">
-                  </div>
-                </div>
-
-                <div class="grid grid-2 gap-2">
-                  <div class="form-group">
-                    <label class="form-label text-xs">Margins (px)</label>
-                    <input type="number" class="form-input" name="margins" min="5" max="60" value="${activeResume.themeCustomization?.margins || 20}">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label text-xs">Border Radius</label>
-                    <input type="number" class="form-input" name="borderRadius" min="0" max="20" value="${activeResume.themeCustomization?.borderRadius || 4}">
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label text-xs">Page Size</label>
-                  <select class="form-select" name="pageSize">
-                    <option value="A4" ${activeResume.themeCustomization?.pageSize === 'A4' ? 'selected' : ''}>A4 Standard</option>
-                    <option value="Letter" ${activeResume.themeCustomization?.pageSize === 'Letter' ? 'selected' : ''}>US Letter</option>
-                    <option value="Legal" ${activeResume.themeCustomization?.pageSize === 'Legal' ? 'selected' : ''}>US Legal</option>
-                  </select>
-                </div>
-
-                <div class="form-group flex items-center gap-2">
-                  <input type="checkbox" name="showIcons" value="true" ${activeResume.themeCustomization?.showIcons ? 'checked' : ''}>
-                  <label class="text-xs">Show section / contact icons</label>
-                </div>
-
-                <button type="submit" class="btn btn-primary btn-xs w-full mt-1">Save Styles</button>
-              </form>
-            </div>
-
-            <!-- Version History Restore -->
-            <div class="card">
-              <h3 class="mb-3">Version History Restore</h3>
-              <div class="flex flex-col gap-2" id="versions-history-list" style="max-height:120px; overflow-y:auto;">
-                <!-- Dynamically populated -->
               </div>
             </div>
 
           </div>
-        </div>
-      ` : `
-        <div class="card p-8 text-center">
-          <h3>No Resume Selected</h3>
-          <p class="text-secondary">Please upload or select a resume document to enable custom layout parameters.</p>
-        </div>
-      `}
-
-      <!-- sandboxed theme preview modal -->
-      <div id="fullscreen-theme-modal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100vh; background: rgba(11,14,20,0.95); z-index: 2000; display:flex; flex-col; justify-content:center; align-items:center;">
-        <div class="card" style="width: 80%; height: 90vh; display:flex; flex-direction:column; overflow:hidden;">
-          <div class="flex justify-between items-center mb-4 pb-2" style="border-bottom: 1px solid var(--border-color)">
-            <h3 id="modal-theme-title">Theme Preview</h3>
-            <button class="btn btn-ghost" id="close-theme-modal">✕ Close</button>
-          </div>
-          <div id="modal-theme-content" style="flex:1; overflow-y:auto; display:flex; justify-content:center; background:#1e293b; padding:32px;"></div>
         </div>
       </div>
     `;
+  },
+
+  async renderResumeSimulationPage() {
+    let resumes = [];
+    try {
+      const data = await API.getResumes();
+      resumes = data.resumes || [];
+    } catch (_) {}
+
+    const selectedSimResumeId = localStorage.getItem('simResumeId') || '';
+
+    // Step 1: Select Resume
+    if (!selectedSimResumeId) {
+      return `
+        <div class="page-header text-center mb-8">
+          <h2 style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #2563EB, #10B981); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">AI Recruitment Simulator</h2>
+          <p class="text-secondary mt-2">Test your profile readiness against rigorous industry baselines and specific target companies.</p>
+        </div>
+
+        <div class="max-w-3xl mx-auto mt-6">
+          <h3 class="text-center mb-6">Choose Resume for Simulation</h3>
+          
+          <div class="grid grid-2 gap-6">
+            <!-- Uploaded Resume Manual Card -->
+            <div class="card glass-card hover-lift p-6 text-center flex flex-col items-center justify-between" style="border: 1px solid var(--border-color); min-height: 250px;">
+              <div style="font-size: 2.5rem; margin-bottom: 12px;">📄</div>
+              <h4>Uploaded Resume (Manual Resume)</h4>
+              <p class="text-secondary text-xs my-3">Use the core resume document uploaded or typed manually in the system.</p>
+              <select class="form-select mb-4" id="sim-select-manual" style="font-size:11px;">
+                ${resumes.map(r => `<option value="${r._id}">📄 ${r.filename}</option>`).join('') || '<option value="">No Resumes Found</option>'}
+              </select>
+              <button class="btn btn-primary btn-sm w-full" id="choose-manual-sim-btn">Use Uploaded Resume</button>
+            </div>
+
+            <!-- Dynamic Resume Card -->
+            <div class="card glass-card hover-lift p-6 text-center flex flex-col items-center justify-between" style="border: 1px dashed var(--primary-color); min-height: 250px;">
+              <div style="font-size: 2.5rem; margin-bottom: 12px;">✨</div>
+              <h4>Dynamic Resume</h4>
+              <p class="text-secondary text-xs my-3">Use the AI-optimized variant tailored inside the Resume Builder.</p>
+              <select class="form-select mb-4" id="sim-select-dynamic" style="font-size:11px;">
+                ${resumes.map(r => `<option value="${r._id}">✨ ${r.filename}</option>`).join('') || '<option value="">No Resumes Found</option>'}
+              </select>
+              <button class="btn btn-primary btn-sm w-full" id="choose-dynamic-sim-btn" style="background: linear-gradient(135deg, #2563EB, #10B981); border:none;">Use Dynamic Resume</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    const simResume = resumes.find(r => r._id === selectedSimResumeId) || resumes[0];
+
+    return `
+      <style>
+        .score-circle {
+          width: 90px;
+          height: 90px;
+          border-radius: 50%;
+          border: 4px solid var(--primary-color);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 22px;
+          color: var(--primary-color);
+          margin-bottom: 12px;
+          background: rgba(37,99,235,0.04);
+        }
+        .progress-indicator {
+          height: 6px;
+          border-radius: 3px;
+          background: rgba(255,255,255,0.05);
+          overflow: hidden;
+        }
+        .progress-indicator-fill {
+          height: 100%;
+          background: var(--primary-color);
+        }
+        @media print {
+          body * { visibility: hidden; }
+          #simulation-printable-report, #simulation-printable-report * { visibility: visible; }
+          #simulation-printable-report { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+      </style>
+
+      <div class="page-header flex justify-between items-center mb-6">
+        <div>
+          <h2>AI Recruitment Simulator</h2>
+          <p class="text-secondary">Simulating: <strong>${simResume?.filename || 'Selected Resume'}</strong></p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btn-reset-simulation">✕ Choose Another Resume</button>
+      </div>
+
+      <!-- STEP 2: GENERAL RESUME SIMULATION RUNNER -->
+      <div class="card p-6 mb-6" id="sim-general-trigger-container">
+        <h3>Step 1: Perform General Candidate Evaluation</h3>
+        <p class="text-secondary text-xs mb-4">Simulate general hiring standards, core strength scoring, and identify formatting & ATS concerns.</p>
+        <button class="btn btn-primary" id="btn-run-general-sim">Run General Evaluation</button>
+      </div>
+
+      <!-- RESULTS PANEL FOR GENERAL EVALUATION -->
+      <div id="simulation-general-results" class="hidden flex flex-col gap-6">
+        <div class="grid grid-4 gap-4">
+          <div class="card flex flex-col items-center justify-center p-4 text-center">
+            <div class="score-circle" id="gauge-overall">0</div>
+            <strong>Overall Score</strong>
+            <span class="badge mt-2" id="badge-overall-rating">Average</span>
+          </div>
+          <div class="card p-4">
+            <h4 class="mb-2 text-xs text-secondary">Hiring Probability</h4>
+            <div class="text-2xl font-bold mb-1" id="text-hiring-prob">0%</div>
+            <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-hiring-prob" style="width:0%;"></div></div>
+          </div>
+          <div class="card p-4">
+            <h4 class="mb-2 text-xs text-secondary">ATS Compatibility</h4>
+            <div class="text-2xl font-bold mb-1" id="text-ats-compat">0%</div>
+            <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-ats-compat" style="width:0%;"></div></div>
+          </div>
+          <div class="card p-4">
+            <h4 class="mb-2 text-xs text-secondary">Confidence Score</h4>
+            <div class="text-2xl font-bold mb-1" id="text-confidence">0%</div>
+            <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-confidence" style="width:0%;"></div></div>
+          </div>
+        </div>
+
+        <!-- Metric Details Grid -->
+        <div class="grid grid-3 gap-4">
+          <div class="card p-4 flex flex-col gap-3">
+            <h3>Technical & Domain</h3>
+            <div>
+              <div class="flex justify-between text-xs mb-1"><span>Technical Strength</span><span id="text-tech-strength">0%</span></div>
+              <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-tech-strength" style="width:0%;"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between text-xs mb-1"><span>Experience Quality</span><span id="text-exp-quality">0%</span></div>
+              <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-exp-quality" style="width:0%;"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between text-xs mb-1"><span>Skill Coverage</span><span id="text-skill-coverage">0%</span></div>
+              <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-skill-coverage" style="width:0%;"></div></div>
+            </div>
+          </div>
+
+          <div class="card p-4 flex flex-col gap-3">
+            <h3>Leadership & Style</h3>
+            <div>
+              <div class="flex justify-between text-xs mb-1"><span>Communication Score</span><span id="text-comm-score">0%</span></div>
+              <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-comm-score" style="width:0%;"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between text-xs mb-1"><span>Leadership Score</span><span id="text-lead-score">0%</span></div>
+              <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-lead-score" style="width:0%;"></div></div>
+            </div>
+          </div>
+
+          <div class="card p-4 flex flex-col gap-3">
+            <h3>Structure & Education</h3>
+            <div>
+              <div class="flex justify-between text-xs mb-1"><span>Project Quality</span><span id="text-proj-quality">0%</span></div>
+              <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-proj-quality" style="width:0%;"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between text-xs mb-1"><span>Education Strength</span><span id="text-edu-strength">0%</span></div>
+              <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-edu-strength" style="width:0%;"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Evaluation Highlights Panels -->
+        <div class="grid grid-2 gap-4">
+          <div class="card p-4">
+            <h4 class="text-success mb-2">✓ Strengths & Positive Highlights</h4>
+            <ul id="list-strengths" class="text-xs text-secondary pl-4" style="list-style-type:disc;"></ul>
+          </div>
+          <div class="card p-4">
+            <h4 class="text-warning mb-2">⚠ Weaknesses & Concerns</h4>
+            <ul id="list-weaknesses" class="text-xs text-secondary pl-4" style="list-style-type:disc;"></ul>
+          </div>
+        </div>
+
+        <div class="grid grid-3 gap-4">
+          <div class="card p-4">
+            <h4>Missing Components</h4>
+            <ul id="list-missing" class="text-xs text-secondary pl-4" style="list-style-type:circle;"></ul>
+          </div>
+          <div class="card p-4">
+            <h4>ATS & Formatting Problems</h4>
+            <ul id="list-ats" class="text-xs text-secondary pl-4" style="list-style-type:circle;"></ul>
+          </div>
+          <div class="card p-4">
+            <h4>Growth & Improvements</h4>
+            <ul id="list-growth" class="text-xs text-secondary pl-4" style="list-style-type:circle;"></ul>
+          </div>
+        </div>
+
+        <!-- STEP 3: COMPANY MATCHING FORM -->
+        <div class="card p-6 mt-4">
+          <h3>Step 2: Simulate for a Specific Company</h3>
+          <p class="text-secondary text-xs mb-4">Evaluate your resume against typical requirements, technology stacks, and interview benchmarks of target firms.</p>
+          
+          <div class="grid grid-3 gap-4 mb-4">
+            <div class="form-group">
+              <label class="form-label text-xs">Target Company</label>
+              <select class="form-select" id="sim-company-select">
+                <option value="Google">Google</option>
+                <option value="Microsoft">Microsoft</option>
+                <option value="Amazon">Amazon</option>
+                <option value="Meta">Meta</option>
+                <option value="Apple">Apple</option>
+                <option value="Netflix">Netflix</option>
+                <option value="Tesla">Tesla</option>
+                <option value="OpenAI">OpenAI</option>
+                <option value="Startup">High-Growth Startup</option>
+                <option value="Enterprise">General Corporate Enterprise</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label text-xs">Target Role</label>
+              <input class="form-input" id="sim-company-role" value="Software Engineer">
+            </div>
+            <div class="form-group">
+              <label class="form-label text-xs">Years of Experience</label>
+              <input type="number" class="form-input" id="sim-company-yoe" value="2">
+            </div>
+          </div>
+          <div class="form-group mb-4">
+            <label class="form-label text-xs">Job Description (optional)</label>
+            <textarea class="form-textarea" id="sim-company-jd" placeholder="Paste target job specification details here..." style="min-height: 80px;"></textarea>
+          </div>
+
+          <button class="btn btn-primary" id="btn-run-company-sim">Run Company Simulation</button>
+        </div>
+
+        <!-- RESULTS PANEL FOR COMPANY SIMULATION -->
+        <div id="simulation-company-results" class="hidden flex flex-col gap-6">
+          <div class="card p-6 text-center flex flex-col items-center">
+            <h3 id="company-sim-title">Google Compatibility Match Report</h3>
+            <div class="text-5xl font-black mt-4 mb-2" style="background: linear-gradient(135deg, #2563EB, #10B981); -webkit-background-clip: text; -webkit-text-fill-color: transparent;" id="text-co-match">0%</div>
+            <p class="text-secondary text-xs">This comparison is based on publicly available hiring trends, industry expectations, and AI analysis. It is not based on confidential hiring data.</p>
+          </div>
+
+          <div class="grid grid-2 gap-4">
+            <!-- Left: Match Scores Breakdown -->
+            <div class="card p-4 flex flex-col gap-3">
+              <h3>Hiring Benchmarks Compatibility</h3>
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span>Interview Probability</span><span id="text-co-interview">0%</span></div>
+                <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-co-interview" style="width:0%;"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span>ATS Match Ratio</span><span id="text-co-ats">0%</span></div>
+                <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-co-ats" style="width:0%;"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span>Core Tech Stack Fit</span><span id="text-co-skill">0%</span></div>
+                <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-co-skill" style="width:0%;"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span>Experience Alignment</span><span id="text-co-exp">0%</span></div>
+                <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-co-exp" style="width:0%;"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span>Project Relevance</span><span id="text-co-proj">0%</span></div>
+                <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-co-proj" style="width:0%;"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span>Culture Fit Estimate</span><span id="text-co-culture">0%</span></div>
+                <div class="progress-indicator"><div class="progress-indicator-fill" id="fill-co-culture" style="width:0%;"></div></div>
+              </div>
+            </div>
+
+            <!-- Right: Senior Recruiter Feedback -->
+            <div class="card p-4 flex flex-col gap-3">
+              <h3>Senior Recruiter Observations</h3>
+              <div class="p-3 rounded text-xs" style="background: rgba(37,99,235,0.04); border: 1px solid var(--border-color); line-height: 1.6;">
+                <strong>Strongest Section:</strong> <span id="text-co-strongest">N/A</span><br>
+                <strong>Weakest Section:</strong> <span id="text-co-weakest">N/A</span><br>
+                <strong>Expected Salary:</strong> <span id="text-co-salary">N/A</span><br>
+                <strong>Career Readiness:</strong> <span id="text-co-readiness">N/A</span>
+              </div>
+              <div class="text-xs text-secondary mt-2">
+                <strong>Reasons for Shortlisting:</strong>
+                <ul id="list-co-shortlist" style="list-style-type:disc; padding-left:16px;"></ul>
+              </div>
+              <div class="text-xs text-secondary">
+                <strong>Hiring Risks / Concerns:</strong>
+                <ul id="list-co-concerns" style="list-style-type:disc; padding-left:16px;"></ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="card p-4">
+            <h3>Expected Interview Questions & Core Preparation Gaps</h3>
+            <div class="grid grid-2 gap-4 mt-2">
+              <div>
+                <h5 class="text-xs font-semibold mb-1">Potential Technical Questions</h5>
+                <ul id="list-co-questions" class="text-xs text-secondary pl-4" style="list-style-type:decimal;"></ul>
+              </div>
+              <div>
+                <h5 class="text-xs font-semibold mb-1">Recommended Projects & Certifications</h5>
+                <ul id="list-co-projects" class="text-xs text-secondary pl-4" style="list-style-type:circle;"></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Printable Report & PDF Trigger -->
+          <div class="card p-4 flex justify-between items-center">
+            <div>
+              <h4>Simulation Report Ready</h4>
+              <p class="text-secondary text-xs">Print or export the comprehensive recruitment readiness and alignment summary.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" id="btn-download-pdf-report">Download PDF Report</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sandboxed Hidden Element for Printable Report Generation -->
+      <div id="simulation-printable-report" class="hidden" style="padding: 40px; background:#fff; color:#000; font-family:sans-serif;">
+        <h1 style="border-bottom: 2px solid #2563EB; padding-bottom: 12px;">TalentAI - Advanced Recruitment Simulation Report</h1>
+        <div style="margin: 20px 0; font-size:14px; line-height: 1.6;">
+          <strong>Target Candidate Resume:</strong> ${simResume?.filename || 'Active Variant'}<br>
+          <div id="print-co-meta"></div>
+          <hr style="border:1px solid #ddd; margin:16px 0;">
+          <h2 style="color:#2563EB;">Overall Baseline Assessment</h2>
+          <div id="print-baseline-summary"></div>
+          <h2 style="color:#2563EB; margin-top:30px;">Company Fit & Recruiter Remarks</h2>
+          <div id="print-company-summary"></div>
+        </div>
+      </div>
+    `;
+  },async renderResumeScreeningPage() {
+    let resumes = [];
+    try {
+      const data = await API.getResumes();
+      resumes = data.resumes || [];
+    } catch (_) {}
+    let activeId = localStorage.getItem('activeResumeId') || '';
+    if (resumes.length && !activeId) activeId = resumes[0]._id;
+
+    return `
+      <div class="page-header mb-6">
+        <h2>Resume Screening & Pre-Audit</h2>
+        <p class="text-secondary">Simulate recruiter pre-screening and check authenticity, flags, and structure verification.</p>
+      </div>
+
+      <div class="card p-6 mb-6">
+        <div class="form-group mb-4">
+          <label class="form-label">Select Target Resume</label>
+          <select class="form-select" id="screen-resume-select" style="max-width: 320px;">
+            ${resumes.map(r => `<option value="${r._id}" ${r._id === activeId ? 'selected' : ''}>📄 ${r.filename}</option>`).join('') || '<option value="">No Resumes Uploaded</option>'}
+          </select>
+        </div>
+
+        <button class="btn btn-primary" id="run-screening-btn">Pre-Screen Resume</button>
+      </div>
+
+      <div class="card p-6 hidden" id="screening-results-container">
+        <h3>Audit & Integrity Report</h3>
+        <div id="screening-results-content" class="mt-4 flex flex-col gap-4"></div>
+      </div>
+    `;
+  },
+
+  async renderResumeImprovementPage() {
+    let resumes = [];
+    try {
+      const data = await API.getResumes();
+      resumes = data.resumes || [];
+    } catch (_) {}
+    let activeId = localStorage.getItem('activeResumeId') || '';
+    if (resumes.length && !activeId) activeId = resumes[0]._id;
+
+    return `
+      <div class="page-header mb-6">
+        <h2>Resume Improvement Roadmap</h2>
+        <p class="text-secondary">Generate a step-by-step optimization checklist to maximize your ATS compatibility score.</p>
+      </div>
+
+      <div class="card p-6 mb-6">
+        <div class="form-group mb-4">
+          <label class="form-label">Select Target Resume</label>
+          <select class="form-select" id="improve-resume-select" style="max-width: 320px;">
+            ${resumes.map(r => `<option value="${r._id}" ${r._id === activeId ? 'selected' : ''}>📄 ${r.filename}</option>`).join('') || '<option value="">No Resumes Uploaded</option>'}
+          </select>
+        </div>
+
+        <button class="btn btn-primary" id="run-improvement-btn">Generate Improvement Report</button>
+      </div>
+
+      <div class="card p-6 hidden" id="improvement-results-container">
+        <h3>Prioritized Suggestions</h3>
+        <div id="improvement-results-content" class="mt-4 flex flex-col gap-4"></div>
+      </div>
+    `;
+  },
+
+  async renderResumeMatchingPage() {
+    let resumes = [];
+    try {
+      const data = await API.getResumes();
+      resumes = data.resumes || [];
+    } catch (_) {}
+    let activeId = localStorage.getItem('activeResumeId') || '';
+    if (resumes.length && !activeId) activeId = resumes[0]._id;
+
+    return `
+      <div class="page-header mb-6">
+        <h2>Resume Job Matching</h2>
+        <p class="text-secondary">Match your resume against active jobs to review skill fit and alignment.</p>
+      </div>
+
+      <div class="card p-6 mb-6">
+        <div class="form-group mb-4">
+          <label class="form-label">Select Target Resume</label>
+          <select class="form-select" id="match-resume-select" style="max-width: 320px;">
+            ${resumes.map(r => `<option value="${r._id}" ${r._id === activeId ? 'selected' : ''}>📄 ${r.filename}</option>`).join('') || '<option value="">No Resumes Uploaded</option>'}
+          </select>
+        </div>
+
+        <button class="btn btn-primary" id="run-matching-btn">Analyze Matching Jobs</button>
+      </div>
+
+      <div class="card p-6 hidden" id="matching-results-container">
+        <h3>Compatibility Matches</h3>
+        <div id="matching-results-content" class="mt-4 flex flex-col gap-4"></div>
+      </div>
+    `;
+  },
+
+  async renderDynamicResumePage() {
+    let resumes = [];
+    try {
+      const data = await API.getResumes();
+      resumes = data.resumes || [];
+    } catch (_) {}
+    let activeId = localStorage.getItem('activeResumeId') || '';
+    if (resumes.length && !activeId) activeId = resumes[0]._id;
+
+    return `
+      <div class="page-header mb-6">
+        <h2>Dynamic Resume Tailoring</h2>
+        <p class="text-secondary">Synthesize a tailored summary and select highlighted projects for a targeted role.</p>
+      </div>
+
+      <div class="card p-6 mb-6">
+        <div class="form-group mb-4">
+          <label class="form-label">Select Target Resume</label>
+          <select class="form-select" id="dynamic-resume-select" style="max-width: 320px;">
+            ${resumes.map(r => `<option value="${r._id}" ${r._id === activeId ? 'selected' : ''}>📄 ${r.filename}</option>`).join('') || '<option value="">No Resumes Uploaded</option>'}
+          </select>
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="form-label">Target Job Title / Description</label>
+          <input class="form-input" id="dynamic-job-title" placeholder="e.g. Senior Frontend Engineer with React experience">
+        </div>
+
+        <button class="btn btn-primary" id="run-dynamic-btn">Tailor Resume Section</button>
+      </div>
+
+      <div class="card p-6 hidden" id="dynamic-results-container">
+        <h3>AI Dynamic Tailoring Preview</h3>
+        <div id="dynamic-results-content" class="mt-4 flex flex-col gap-4"></div>
+      </div>
+    `;
   }
+
 };

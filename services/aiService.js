@@ -1152,6 +1152,154 @@ const shouldUseAiCache = (state, cooldownMs = 30000) => {
 
 const getCooldownMessage = () => 'AI is temporarily busy. Please wait a few seconds and try again.';
 
+exports.synthesizeResume = async (contextStr, userId = null, options = {}) => {
+  const fallback = {
+    name: 'Synthesized Candidate',
+    email: 'synthesized@example.com',
+    phone: '',
+    location: '',
+    summary: 'Synthesized resume summary.',
+    skills: [],
+    experience: [],
+    education: [],
+    certifications: []
+  };
+  options.featureName = 'resume-generator';
+  const prompt = `Return a JSON object matching this schema exactly:\n` +
+    `{\n` +
+    `  "name": "string",\n` +
+    `  "email": "string",\n` +
+    `  "phone": "string",\n` +
+    `  "location": "string",\n` +
+    `  "summary": "string",\n` +
+    `  "skills": ["string"],\n` +
+    `  "experience": [{"company": "string", "role": "string", "startDate": "string", "endDate": "string", "description": "string"}],\n` +
+    `  "education": [{"institution": "string", "degree": "string", "year": "string"}],\n` +
+    `  "certifications": ["string"]\n` +
+    `}\n\n` +
+    `Synthesize a clean and modern professional resume from the following candidate information:\n\n` +
+    `${contextStr}`;
+
+  const data = await callGemini(prompt, {}, fallback, userId, options);
+  return data;
+};
+
+exports.advancedSimulate = async (resumeText, companyInfo = null, userId = null, options = {}) => {
+  const fallback = {
+    overallScore: 78,
+    hiringProbability: 60,
+    atsCompatibilityScore: 70,
+    technicalStrength: 75,
+    communicationScore: 80,
+    leadershipScore: 65,
+    projectQuality: 70,
+    experienceQuality: 72,
+    educationStrength: 85,
+    skillCoverage: 75,
+    confidenceScore: 90,
+    overallRating: 'Good',
+    strengths: ['Solid technical foundations', 'Clear experience timelines'],
+    weaknesses: ['Missing clear social/GitHub profile links in header', 'Impact statistics can be quantified further'],
+    missingSkills: ['System Design', 'Cloud Architecture'],
+    missingKeywords: ['Microservices', 'Kubernetes'],
+    recruiterConcerns: ['Short tenure at recent roles'],
+    positiveHighlights: ['Graduated from well regarded institution'],
+    atsProblems: ['Two column layout may cause text parser warnings'],
+    formattingIssues: ['Ensure email and phone icons are uniformly aligned'],
+    careerGrowthSuggestions: ['Focus on cloud deployment projects and scalability certifications'],
+    priorityImprovements: ['Add impact metrics to CloudTech experience description'],
+    companyMatch: companyInfo ? {
+      overallMatchScore: 75,
+      interviewProbability: 65,
+      resumeMatchPercentage: 78,
+      atsMatch: 72,
+      skillMatch: 75,
+      experienceMatch: 70,
+      projectMatch: 80,
+      leadershipMatch: 60,
+      educationMatch: 85,
+      cultureFitEstimate: 75,
+      recruiterFeedback: {
+        positiveObservations: ['Strong React and NodeJS fundamentals matches our tech stack'],
+        reasonsForRejection: ['Lack of deep systems architecture tenure'],
+        reasonsForShortlisting: ['Strong GitHub profile matches and clear code quality'],
+        concerns: ['Candidate might require onboarding guidance for backend scalability'],
+        strongestSection: 'Projects',
+        weakestSection: 'Experience Descriptions',
+        topImprovements: ['Explain contributions to AWS EKS migrations in detail'],
+        expectedInterviewQuestions: ['Explain how you migrated CloudTech monolith to microservices'],
+        skillsToImprove: ['System design patterns', 'Kubernetes networking'],
+        recommendedCertifications: ['AWS Solutions Architect Associate'],
+        projectsToAdd: ['Construct a high scalability distributed rate limiter project'],
+        expectedSalaryRange: '$120,000 - $145,000 USD',
+        careerReadiness: 'Ready for Mid-level systems integration engineering paths',
+        learningResources: ['Educative: Scalability and System Design', 'AWS Skill Builder']
+      }
+    } : null
+  };
+
+  options.featureName = 'recruitment-simulation';
+  const prompt = `Return a JSON object matching this schema exactly:\n` +
+    `{\n` +
+    `  "overallScore": number,\n` +
+    `  "hiringProbability": number,\n` +
+    `  "atsCompatibilityScore": number,\n` +
+    `  "technicalStrength": number,\n` +
+    `  "communicationScore": number,\n` +
+    `  "leadershipScore": number,\n` +
+    `  "projectQuality": number,\n` +
+    `  "experienceQuality": number,\n` +
+    `  "educationStrength": number,\n` +
+    `  "skillCoverage": number,\n` +
+    `  "confidenceScore": number,\n` +
+    `  "overallRating": "Excellent" | "Good" | "Average" | "Needs Improvement",\n` +
+    `  "strengths": ["string"],\n` +
+    `  "weaknesses": ["string"],\n` +
+    `  "missingSkills": ["string"],\n` +
+    `  "missingKeywords": ["string"],\n` +
+    `  "recruiterConcerns": ["string"],\n` +
+    `  "positiveHighlights": ["string"],\n` +
+    `  "atsProblems": ["string"],\n` +
+    `  "formattingIssues": ["string"],\n` +
+    `  "careerGrowthSuggestions": ["string"],\n` +
+    `  "priorityImprovements": ["string"],\n` +
+    `  "companyMatch": {\n` +
+    `    "overallMatchScore": number,\n` +
+    `    "interviewProbability": number,\n` +
+    `    "resumeMatchPercentage": number,\n` +
+    `    "atsMatch": number,\n` +
+    `    "skillMatch": number,\n` +
+    `    "experienceMatch": number,\n` +
+    `    "projectMatch": number,\n` +
+    `    "leadershipMatch": number,\n` +
+    `    "educationMatch": number,\n` +
+    `    "cultureFitEstimate": number,\n` +
+    `    "recruiterFeedback": {\n` +
+    `      "positiveObservations": ["string"],\n` +
+    `      "reasonsForRejection": ["string"],\n` +
+    `      "reasonsForShortlisting": ["string"],\n` +
+    `      "concerns": ["string"],\n` +
+    `      "strongestSection": "string",\n` +
+    `      "weakestSection": "string",\n` +
+    `      "topImprovements": ["string"],\n` +
+    `      "expectedInterviewQuestions": ["string"],\n` +
+    `      "skillsToImprove": ["string"],\n` +
+    `      "recommendedCertifications": ["string"],\n` +
+    `      "projectsToAdd": ["string"],\n` +
+    `      "expectedSalaryRange": "string",\n` +
+    `      "careerReadiness": "string",\n` +
+    `      "learningResources": ["string"]\n` +
+    `    }\n  }\n` +
+    `}\n\n` +
+    `Perform a rigorous simulated recruitment evaluation of the following candidate resume:\n\n` +
+    `Candidate Resume:\n${resumeText}\n\n` +
+    (companyInfo ? `Target Company/Role Context Details:\n${JSON.stringify(companyInfo)}\n\n` +
+     `Important Requirement: Evaluate this candidate's compatibility for this company & role against typical public standards, tech expectations, common recruitment profiles, and guidelines. (Do not claim inside knowledge: verify that you are evaluating based on industry benchmarks and publicly understood engineering hiring expectations for this firm.)` : `Perform a general baseline talent screening simulation matching industry best practices.`);
+
+  const data = await callGemini(prompt, {}, fallback, userId, options);
+  return data;
+};
+
 module.exports = {
   ...module.exports,
   buildAiCacheKey,

@@ -678,6 +678,95 @@ exports.restoreVersion = async (req, res) => {
   }
 };
 
+exports.generateAIResume = async (req, res) => {
+  try {
+    const AIContextBuilder = require('../services/AIContextBuilder');
+    const fullContext = await AIContextBuilder.buildContext(req.user._id);
+    const textContext = AIContextBuilder.formatPromptContext(fullContext);
+
+    // Call synthesis service
+    const synthesized = await aiService.synthesizeResume(textContext, req.user._id, { forceRegenerate: true });
+    
+    // Clear isPrimary on other resumes
+    await Resume.updateMany({ user: req.user._id }, { isPrimary: false });
+
+    // Create new resume document in database
+    const resume = await Resume.create({
+      user: req.user._id,
+      filename: `AI_Generated_Resume_${Date.now()}.pdf`,
+      filepath: 'generated-by-ai', // dummy path
+      parsed: {
+        name: synthesized.name || req.user.name,
+        email: synthesized.email || req.user.email,
+        phone: synthesized.phone || req.user.phone || '',
+        location: synthesized.location || req.user.location || '',
+        summary: synthesized.summary || '',
+        skills: Array.isArray(synthesized.skills) ? synthesized.skills : [],
+        experience: Array.isArray(synthesized.experience) ? synthesized.experience : [],
+        education: Array.isArray(synthesized.education) ? synthesized.education : [],
+        certifications: Array.isArray(synthesized.certifications) ? synthesized.certifications : []
+      },
+      score: 85,
+      isPrimary: true
+    });
+
+    res.json({ success: true, resume });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.updateResumeContent = async (req, res) => {
+  try {
+    const resume = await Resume.findOne({ _id: req.params.resumeId, user: req.user._id });
+    if (!resume) return res.status(404).json({ success: false, message: 'Resume not found' });
+
+    if (req.body.parsed) {
+      const parsedData = req.body.parsed;
+      if (parsedData.name !== undefined) resume.parsed.name = parsedData.name;
+      if (parsedData.email !== undefined) resume.parsed.email = parsedData.email;
+      if (parsedData.phone !== undefined) resume.parsed.phone = parsedData.phone;
+      if (parsedData.location !== undefined) resume.parsed.location = parsedData.location;
+      if (parsedData.summary !== undefined) resume.parsed.summary = parsedData.summary;
+      if (parsedData.skills !== undefined) resume.parsed.skills = parsedData.skills;
+      if (parsedData.experience !== undefined) resume.parsed.experience = parsedData.experience;
+      if (parsedData.education !== undefined) resume.parsed.education = parsedData.education;
+      if (parsedData.certifications !== undefined) resume.parsed.certifications = parsedData.certifications;
+    }
+
+    if (req.body.themeCustomization) {
+      resume.themeCustomization = { ...resume.themeCustomization, ...req.body.themeCustomization };
+    }
+
+    await resume.save();
+    res.json({ success: true, resume });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.advancedSimulateResume = async (req, res) => {
+  try {
+    const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id });
+    if (!resume) return res.status(404).json({ success: false, message: 'Resume not found' });
+
+    const resumeText = resume.ocrText || JSON.stringify(resume.parsed || resume);
+    
+    const companyInfo = req.body.company ? {
+      company: req.body.company,
+      role: req.body.role || 'Software Engineer',
+      yearsOfExperience: req.body.yearsOfExperience || '0',
+      jobDescription: req.body.jobDescription || ''
+    } : null;
+
+    const simulation = await aiService.advancedSimulate(resumeText, companyInfo, req.user._id, { forceRegenerate: true });
+
+    res.json({ success: true, simulation });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // ==========================================
 // DIRECT BODY/QUERY PARAMS ROUTE HANDLERS
 // ==========================================

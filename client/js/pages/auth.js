@@ -6,6 +6,18 @@ const AuthPage = {
     this.mode = params.mode || 'login';
     this.role = params.role || 'candidate';
 
+    if (params.token) {
+      API.setToken(params.token);
+      API.getMe().then(res => {
+        if (res && res.user) {
+          API.setUser(res.user);
+          UI.toast(`Welcome back, ${res.user.name}!`, 'success');
+          window.location.hash = res.user.role === 'recruiter' ? '#/recruiter' : '#/candidate';
+        }
+      });
+      return `<div style="padding: 100px; text-align: center;"><div class="spinner"></div><p>Logging in with Google...</p></div>`;
+    }
+
     return `
       <div class="auth-page gradient-bg">
         <div class="glass-card auth-card animate-scale-in">
@@ -50,6 +62,13 @@ const AuthPage = {
               ${this.mode === 'login' ? 'Sign In' : 'Create Account'}
             </button>
           </form>
+
+          <div style="margin: 20px 0; text-align: center; border-top: 1px solid var(--border-color); padding-top: 20px;">
+            <a href="/api/auth/google?role=${this.role}" class="btn btn-secondary w-full flex items-center justify-center gap-2" style="background: #ffffff; color: #5f6368; border: 1px solid #dadce0;">
+              <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84c-.21 1.12-.84 2.07-1.79 2.7v2.24h2.91c1.7-1.57 2.68-3.88 2.68-6.57z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.91-2.24c-.8.54-1.84.87-3.05.87-2.35 0-4.33-1.59-5.05-3.73H.95v2.3A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.72A5.4 5.4 0 0 1 3.6 9c0-.6.1-1.17.28-1.72V4.98H.95A8.99 8.99 0 0 0 0 9c0 1.45.35 2.82.95 4.02l3-2.3z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35L15 2.4C13.46.97 11.41 0 9 0 5.46 0 2.4 2.07.95 4.98l3 2.3c.72-2.14 2.7-3.7 5.05-3.7z"/></svg>
+              Continue with Google
+            </a>
+          </div>
 
           <p class="text-center text-sm text-secondary mt-4">
             ${this.mode === 'login'
