@@ -1,7 +1,5 @@
-const { generateStructuredContent } = require('./geminiClient');
+const AIGateway = require('./AIGateway');
 const prompts = require('./aiPrompts');
-
-const MODEL = 'gemini-2.5-flash';
 
 const getLinkedInData = async (userId) => {
   if (!userId) return null;
@@ -20,57 +18,16 @@ const getLinkedInData = async (userId) => {
   return null;
 };
 
-// Every AI capability uses the same Gemini client and a dedicated prompt so the experience stays modular.
+// Route through the centralized AIGateway
 const callGemini = async (promptFactory, payload, fallback, userId = null, options = {}) => {
   const featureName = options.featureName || 'general-ai';
-  const force = options.forceRegenerate || false;
-  const AICache = require('../models/AICache');
-
-  if (userId && !force) {
-    try {
-      const cached = await AICache.findOne({ userId, featureName });
-      if (cached && cached.generatedData) {
-        return { ...fallback, ...cached.generatedData, configured: true, source: 'cache' };
-      }
-    } catch (cacheError) {
-      console.error('[aiService] Cache lookup error:', cacheError.message);
-    }
-  }
-
-  try {
-    if (process.env.AI_ENABLED !== "true") {
-      return {
-          success: false,
-          message: "AI is temporarily disabled."
-      };
-    }
-    const prompt = typeof promptFactory === 'function' ? promptFactory(payload) : promptFactory;
-    const result = await generateStructuredContent(prompt, { model: MODEL, temperature: 0.2, maxOutputTokens: 1200 });
-    let resolvedData = fallback;
-    if (result && typeof result === 'object' && !Array.isArray(result)) {
-      resolvedData = { ...fallback, ...result, configured: true, source: 'gemini' };
-    } else {
-      resolvedData = { ...fallback, configured: true, source: 'gemini' };
-    }
-
-    if (userId) {
-      try {
-        await AICache.findOneAndUpdate(
-          { userId, featureName },
-          { userId, featureName, generatedData: resolvedData, lastActualCallAt: new Date() },
-          { upsert: true, new: true }
-        );
-      } catch (cacheSaveError) {
-        console.error('[aiService] Cache save error:', cacheSaveError.message);
-      }
-    }
-
-    return resolvedData;
-  } catch (error) {
-    console.error('[aiService] Gemini error:', error.message);
-    return { ...fallback, configured: false, source: 'fallback', error: error.message };
-  }
+  const prompt = typeof promptFactory === 'function' ? promptFactory(payload) : promptFactory;
+  
+  // Package payload so mock handlers can inspect context if needed
+  const extendedOptions = { ...options, payload };
+  return await AIGateway.generate(featureName, prompt, fallback, userId, extendedOptions);
 };
+
 
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
@@ -130,7 +87,8 @@ exports.parseResume = async (filepath, userId = null, options = {}) => {
     rawAnalysis: 'Fallback resume parsing output.'
   };
 
-  const data = await callGemini(prompts.parseResumePrompt, filepath, fallback, userId, options);
+  const promptPayload = options.ocrText ? `File Path: ${filepath}\nExtracted OCR Text Content:\n${options.ocrText}` : filepath;
+  const data = await callGemini(prompts.parseResumePrompt, promptPayload, fallback, userId, options);
   return {
     ...data,
     module: 'resume-parsing',
@@ -1123,6 +1081,61 @@ exports.companyMatching = async (profile, jobSkills, job, userId = null, options
     matchScore: toNumber(data.matchScore, fallback.matchScore),
     contributionScore: toNumber(data.contributionScore, fallback.contributionScore)
   };
+};
+
+exports.handleProjectChat = async (repoName, question, textContext, userId = null, options = {}) => {
+  const PromptBuilder = require('./PromptBuilder');
+  const prompt = PromptBuilder.buildProjectChatPrompt(repoName, question, textContext);
+  const fallback = { response: "Placeholder explanation: This project uses a full-stack Node/React structure with local configurations." };
+  options.featureName = 'repository-chat';
+  options.payload = { repoName, question };
+  return await callGemini(() => prompt, {}, fallback, userId, options);
+};
+
+exports.handleProjectIntelligence = async (repoName, textContext, userId = null, options = {}) => {
+  const PromptBuilder = require('./PromptBuilder');
+  const prompt = PromptBuilder.buildProjectIntelligencePrompt(repoName, textContext);
+  const fallback = {
+    projectOverview: "An advanced Full-Stack Talent Management platform utilizing Node.js and MongoDB.",
+    architectureSummary: "A Model-View-Controller (MVC) server-side layout built with Express.",
+    folderExplanation: "Root contains the backend server files; client contains dashboard UI assets.",
+    techStack: ["Node.js", "Express.js", "React.js", "MongoDB"],
+    databaseFlow: "Profiles are cached and saved inside the MongoDB database schema.",
+    authFlow: "Uses JSON Web Token (JWT) verification inside Express middleware.",
+    apiFlow: "REST APIs are available under /api/auth, /api/github, and /api/ai endpoints.",
+    dependencies: ["express", "mongoose", "jsonwebtoken"],
+    codeComplexity: 78,
+    contributionSummary: "Consistent developer commit patterns.",
+    timeline: "Development timeline details.",
+    commitSummary: "Initial schema creation and auth configuration.",
+    importantFiles: ["server.js", "controllers/authController.js"],
+    unusedFiles: ["temp-script.js"],
+    deadCode: "No major dead code detected.",
+    securityWarnings: ["Hardcoded secrets in defaults"],
+    projectScore: 84,
+    portfolioScore: 82,
+    technicalScore: 86,
+    interviewDifficulty: "Medium",
+    atsScore: 85
+  };
+  options.featureName = 'project-intelligence';
+  options.payload = { repoName };
+  return await callGemini(() => prompt, {}, fallback, userId, options);
+};
+
+exports.handleProjectVisualizations = async (repoName, textContext, userId = null, options = {}) => {
+  const PromptBuilder = require('./PromptBuilder');
+  const prompt = PromptBuilder.buildProjectVisualizationsPrompt(repoName, textContext);
+  const fallback = {
+    dependencyGraph: `graph TD\n  App[app.js] --> Express[express]`,
+    architectureDiagram: `graph LR\n  Client[Client] <--> Server[Express]`,
+    databaseDiagram: `erDiagram\n  User ||--o{ Resume : uploads`,
+    apiFlowDiagram: `graph TD\n  Request --> AuthCheck`,
+    mindMap: `graph TD\n  Root[Project Stack] --> Backend`
+  };
+  options.featureName = 'project-viz';
+  options.payload = { repoName };
+  return await callGemini(() => prompt, {}, fallback, userId, options);
 };
 
 const buildAiCacheKey = (userId, featureName) => `${userId}:${featureName}`;

@@ -15,7 +15,7 @@ class AIContextBuilder {
     try {
       const [user, resume, linkedin, githubProfile, githubRepos, assessments] = await Promise.all([
         User.findById(userId).lean(),
-        Resume.findOne({ user: userId, isPrimary: true }).lean().then(r => r || Resume.findOne({ user: userId }).sort('-createdAt').lean()),
+        Resume.findOne({ user: userId, isPrimary: true }).sort('-createdAt').lean().then(r => r || Resume.findOne({ user: userId }).sort('-createdAt').lean()),
         LinkedInProfile.findOne({ user: userId }).lean(),
         GitHubProfile.findOne({ user: userId }).lean(),
         GitHubRepository.find({ user: userId }).lean(),

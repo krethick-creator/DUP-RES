@@ -1,12 +1,13 @@
 require('dotenv').config();
+const Logger = require('../utils/logger');
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 if (!googleClientId) {
-  console.error('✗ Missing GOOGLE_CLIENT_ID');
+  Logger.error('✗ Missing GOOGLE_CLIENT_ID');
 }
 if (!googleClientSecret) {
-  console.error('✗ Missing GOOGLE_CLIENT_SECRET');
+  Logger.error('✗ Missing GOOGLE_CLIENT_SECRET');
 }
 if (googleClientId && googleClientSecret) {
   console.log('✓ Google OAuth configured');
@@ -19,19 +20,19 @@ const linkedinRedirectUri = process.env.LINKEDIN_REDIRECT_URI;
 if (linkedinClientId) {
   console.log('✓ LinkedIn Client ID Loaded');
 } else {
-  console.error('✗ Missing LINKEDIN_CLIENT_ID');
+  Logger.error('✗ Missing LINKEDIN_CLIENT_ID');
 }
 
 if (linkedinClientSecret) {
   console.log('✓ LinkedIn Client Secret Loaded');
 } else {
-  console.error('✗ Missing LINKEDIN_CLIENT_SECRET');
+  Logger.error('✗ Missing LINKEDIN_CLIENT_SECRET');
 }
 
 if (linkedinRedirectUri) {
   console.log('✓ LinkedIn Redirect URI Loaded');
 } else {
-  console.error('✗ Missing LINKEDIN_REDIRECT_URI');
+  Logger.error('✗ Missing LINKEDIN_REDIRECT_URI');
 }
 
 module.exports = {

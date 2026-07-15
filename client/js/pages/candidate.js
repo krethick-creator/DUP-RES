@@ -914,7 +914,10 @@ const CandidateDashboard = {
       const fd = new FormData();
       fd.append('resume', file);
       try {
-        await API.uploadResume(fd);
+        const res = await API.uploadResume(fd);
+        if (res && res.resume && res.resume._id) {
+          localStorage.setItem('activeResumeId', res.resume._id);
+        }
         UI.toast('Resume uploaded and parsed!', 'success');
         this.loadResumes();
       } catch (err) { UI.toast(err.message, 'error'); }
@@ -2602,8 +2605,9 @@ const CandidateDashboard = {
     const buttons = document.querySelectorAll('[data-ai-action]');
     buttons.forEach(btn => btn.disabled = true);
     try {
+      const activeId = localStorage.getItem('activeResumeId');
       const resumes = await API.getResumes();
-      const resume = resumes.resumes?.[0];
+      const resume = (resumes.resumes || []).find(r => r._id === activeId) || resumes.resumes?.[0];
       if (!resume) { 
         el.innerHTML = UI.emptyState('📄', 'No resume', 'Upload a resume first'); 
         buttons.forEach(btn => btn.disabled = false);
@@ -2615,7 +2619,81 @@ const CandidateDashboard = {
       else if (action === 'improve') result = await API.getImprovementReport(resume._id);
       else result = await API.post(`/resumes/${resume._id}/dynamic`, { job: { title: 'Senior Developer' } });
 
-      el.innerHTML = `<pre style="white-space:pre-wrap;font-size:0.875rem">${JSON.stringify(result, null, 2)}</pre>`;
+      if (action === 'simulate') {
+        const scenarios = result.simulation?.scenarios || [];
+        el.innerHTML = `
+          <h3 class="mb-4">Resume Simulation Results</h3>
+          <div class="grid grid-3 gap-4">
+            ${scenarios.map(s => `
+              <div class="card p-4">
+                <h4 class="mb-2">${s.scenario}</h4>
+                <div class="text-xl font-bold mb-2" style="color:var(--primary-color)">${s.acceptanceRate}% Acceptance</div>
+                <p class="text-sm text-secondary">${s.feedback}</p>
+              </div>
+            `).join('') || '<p>No simulation scenarios returned</p>'}
+          </div>`;
+      } else if (action === 'improve') {
+        const report = result.report;
+        if (!report) {
+          el.innerHTML = `<p class="text-secondary">No improvement report generated. Try clicking regenerate.</p>`;
+        } else {
+          el.innerHTML = `
+            <h3 class="mb-2">Resume Improvement Report</h3>
+            <div class="flex justify-between items-center mb-4 p-3 rounded" style="background: rgba(37,99,235,0.06)">
+              <div><strong>Overall Grade:</strong> <span class="badge badge-primary">${report.overallGrade}</span></div>
+              <div><strong>Estimated Score Increase:</strong> <strong class="text-success">+${report.estimatedScoreIncrease}%</strong></div>
+            </div>
+            <p class="mb-4">${report.summary || ''}</p>
+            <div class="flex flex-col gap-2">
+              ${(report.improvements || []).map(imp => `
+                <div class="leaderboard-item" style="padding:12px; display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <strong>${imp.area}</strong>
+                    <div class="text-sm text-muted mt-1">${imp.suggestion}</div>
+                  </div>
+                  <span class="badge badge-${imp.priority === 'high' ? 'primary' : 'warning'}">${imp.priority}</span>
+                </div>
+              `).join('') || '<p>No improvements suggested</p>'}
+            </div>`;
+        }
+      } else {
+        const dynamic = result.dynamic;
+        if (!dynamic) {
+          el.innerHTML = `<p class="text-secondary">No dynamic tailoring results returned.</p>`;
+        } else {
+          el.innerHTML = `
+            <h3 class="mb-2">Dynamic Resume (Tailored Summary & Projects)</h3>
+            <p class="text-sm text-secondary mb-4">${dynamic.summary || ''}</p>
+            <div class="card p-4 mb-4">
+              <h4 class="mb-2">Tailored Summary</h4>
+              <p class="mt-2" style="font-style: italic">"${dynamic.tailoredSummary}"</p>
+            </div>
+            <div class="grid grid-2 gap-4 mb-4">
+              <div class="card p-4">
+                <h4 class="mb-2">Highlighted Skills</h4>
+                <div class="flex flex-wrap gap-1">
+                  ${(dynamic.highlightedSkills || []).map(s => `<span class="badge badge-primary">${s}</span>`).join('') || 'None'}
+                </div>
+              </div>
+              <div class="card p-4">
+                <h4 class="mb-2">Suggested Changes</h4>
+                <ul style="list-style: disc; padding-left: 16px;">
+                  ${(dynamic.suggestedChanges || []).map(c => `<li>${c}</li>`).join('') || 'None'}
+                </ul>
+              </div>
+            </div>
+            <div class="card p-4">
+              <h4 class="mb-2">Optimized Projects Section</h4>
+              ${(dynamic.resumeProjectSection || []).map(p => `
+                <div class="mb-4" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                  <strong>${p.title}</strong>
+                  <p class="text-sm text-secondary mt-1">${p.description}</p>
+                  <div class="text-xs text-muted mt-1"><strong>Impact:</strong> ${p.impactStatement}</div>
+                </div>
+              `).join('') || 'No tailored projects section generated'}
+            </div>`;
+        }
+      }
     } catch (err) { 
       const msg = err.status === 429 || err.message.includes('429')
         ? "AI is temporarily busy. Please wait a few seconds and try again."

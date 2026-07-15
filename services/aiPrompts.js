@@ -2,10 +2,19 @@ const JSON_ONLY = 'Return valid JSON only. Do not wrap the answer in markdown co
 
 const baseInstruction = (task, extra = '') => `${task}\n\n${JSON_ONLY}\n\n${extra}`.trim();
 
+const getResumeText = (resume) => {
+  if (!resume) return '';
+  if (typeof resume === 'string') return resume;
+  if (resume.ocrText && resume.ocrText.trim().length > 0) {
+    return resume.ocrText;
+  }
+  return JSON.stringify(resume.parsed || resume);
+};
+
 module.exports = {
     resumeScreeningPrompt: ({ resume, job }) => baseInstruction(
         'Evaluate how well the resume matches the job description.',
-        `Return JSON: matchScore (0-100), recommendation (shortlist, review, or reject), strengths (array), weaknesses (array), missingSkills (array), explanation (string), confidence (0-1).\nResume:${JSON.stringify(resume || {})}\nJob:${JSON.stringify(job || {})}`
+        `Return JSON: matchScore (0-100), recommendation (shortlist, review, or reject), strengths (array), weaknesses (array), missingSkills (array), explanation (string), confidence (0-1).\nResume:${getResumeText(resume)}\nJob:${JSON.stringify(job || {})}`
     ),
 
     parseResumePrompt: (filepath) => baseInstruction(
@@ -25,32 +34,32 @@ module.exports = {
 
     explainScorePrompt: ({ score, context }) => baseInstruction(
         'Explain a candidate score with a transparent breakdown.',
-        `Return JSON: factors (array of factor, weight, score), summary (string), confidence (0-1).\nScore:${score}\nContext:${JSON.stringify(context || {})}`
+        `Return JSON: factors (array of factor, weight, score), summary (string), confidence (0-1).\nScore:${score}\nContext:${getResumeText(context)}`
     ),
 
     dynamicResumePrompt: ({ resume, job, repos }) => baseInstruction(
         'Tailor candidate resume and map their GitHub projects to the target role.',
-        `Return JSON: tailoredSummary (string), highlightedSkills (array), suggestedChanges (array), resumeProjectSection (array of objects with title, description, technologiesUsed (array), keyContributions, impactStatement, bulletPoints (array)), summary (string).\nResume:${JSON.stringify(resume || {})}\nTarget job:${JSON.stringify(job || {})}\nGitHub Repos:${JSON.stringify(repos || [])}`
+        `Return JSON: tailoredSummary (string), highlightedSkills (array), suggestedChanges (array), resumeProjectSection (array of objects with title, description, technologiesUsed (array), keyContributions, impactStatement, bulletPoints (array)), summary (string).\nResume:${getResumeText(resume)}\nTarget job:${JSON.stringify(job || {})}\nGitHub Repos:${JSON.stringify(repos || [])}`
     ),
 
     resumeSimulationPrompt: ({ resume, scenarios }) => baseInstruction(
         'Estimate how a resume would perform in different hiring environments.',
-        `Return JSON: scenarios (array of scenario, acceptanceRate (0-100), feedback (string), confidence (0-1)).\nResume:${JSON.stringify(resume || {})}\nScenarios:${JSON.stringify(scenarios || [])}`
+        `Return JSON: scenarios (array of scenario, acceptanceRate (0-100), feedback (string), confidence (0-1)).\nResume:${getResumeText(resume)}\nScenarios:${JSON.stringify(scenarios || [])}`
     ),
 
     authenticityPrompt: ({ resume }) => baseInstruction(
         'Review a resume for plausibility, fraud-risk, and inconsistencies.',
-        `Return JSON: authenticityScore (0-100), flags (array), verification (object with employment, education, skills), summary (string).\nResume:${JSON.stringify(resume || {})}`
+        `Return JSON: authenticityScore (0-100), flags (array), verification (object with employment, education, skills), summary (string).\nResume:${getResumeText(resume)}`
     ),
 
     timelinePrompt: ({ resume }) => baseInstruction(
         'Turn a resume into a structured professional timeline.',
-        `Return JSON: timeline (array of id, title, company, start, end, type), summary (string).\nResume:${JSON.stringify(resume || {})}`
+        `Return JSON: timeline (array of id, title, company, start, end, type), summary (string).\nResume:${getResumeText(resume)}`
     ),
 
     improvementReportPrompt: ({ resume }) => baseInstruction(
         'Produce a prioritized report for raising a resume score.',
-        `Return JSON: overallGrade (string), improvements (array of area, suggestion, priority), estimatedScoreIncrease (number), summary (string).\nResume:${JSON.stringify(resume || {})}`
+        `Return JSON: overallGrade (string), improvements (array of area, suggestion, priority), estimatedScoreIncrease (number), summary (string).\nResume:${getResumeText(resume)}`
     ),
 
     githubAnalysisPrompt: ({ username, repos }) => baseInstruction(

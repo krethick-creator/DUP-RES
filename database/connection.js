@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const config = require('../config');
 const fallbackStore = require('../utils/fallbackStore');
+const Logger = require('../utils/logger');
 
 const User = require('../models/User');
 const Company = require('../models/Company');
@@ -125,8 +126,8 @@ const connectDB = async () => {
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     return true;
   } catch (error) {
-    console.error(`MongoDB connection error: ${error.message}`);
-    console.log('Running with local fallback data store.');
+    Logger.error(`MongoDB connection error: ${error.message}`);
+    Logger.info('Running with local fallback data store.');
     fallbackStore.ensureSeeded();
     patchModel(User, 'User', {
       find: (filter) => fallbackStore.listUsers(filter),

@@ -604,7 +604,9 @@ exports.linkedinCallback = async (req, res) => {
     user.lastLinkedInSync = new Date();
 
     await user.save();
-    console.log('✓ User Updated');
+    if (process.env.DEBUG === "true") {
+      console.log('✓ User Updated');
+    }
 
     // Create or Update LinkedInProfile model
     await LinkedInProfile.findOneAndUpdate(
@@ -621,7 +623,9 @@ exports.linkedinCallback = async (req, res) => {
       },
       { upsert: true, new: true }
     );
-    console.log('✓ Profile Synced');
+    if (process.env.DEBUG === "true") {
+      console.log('✓ Profile Synced');
+    }
 
     // Save encrypted token in OAuthAccount collection
     await OAuthAccount.findOneAndUpdate(
@@ -636,7 +640,9 @@ exports.linkedinCallback = async (req, res) => {
       },
       { upsert: true, new: true }
     );
-    console.log('✓ LinkedIn Connected');
+    if (process.env.DEBUG === "true") {
+      console.log('✓ LinkedIn Connected');
+    }
 
     res.redirect(`${config.clientUrl}/#/candidate/profile`);
   } catch (error) {

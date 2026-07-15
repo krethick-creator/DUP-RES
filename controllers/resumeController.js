@@ -1,15 +1,110 @@
 const Resume = require('../models/Resume');
 const aiService = require('../services/aiService');
 const AICache = require('../models/AICache');
+const OCRService = require('../services/OCRService');
+const Logger = require('../utils/logger');
+
+const printPipelineStep = (stage, input, output, status, reason) => {
+  if (process.env.DEBUG === "true") {
+    console.log('\n=========================');
+    console.log('PIPELINE STEP');
+    console.log('=========================');
+    console.log(`Stage:\n${stage}`);
+    console.log(`Input:\n${input}`);
+    console.log(`Output:\n${output}`);
+    console.log(`Status:\n${status}`);
+    console.log(`Reason:\n${reason}`);
+    console.log('=========================\n');
+  }
+};
+
+const printEndpointDebug = (endpointName, req, resume, responseData) => {
+  if (process.env.DEBUG === "true") {
+    console.log(`\n--- DEBUG BACKEND: ${endpointName} ---`);
+    console.log(`User ID: ${req.user?._id}`);
+    console.log(`Resume ID requested: ${req.params.id || req.params.resumeId || req.body.resumeId}`);
+    console.log(`Resume ID actually loaded: ${resume?._id}`);
+    console.log(`MongoDB query: findOne({ _id: '${req.params.id || req.params.resumeId || req.body.resumeId}', user: '${req.user?._id}' })`);
+    console.log(`MongoDB document: ${resume ? 'FOUND' : 'NOT FOUND'}`);
+    if (resume) {
+      console.log(`Document _id: ${resume._id}`);
+      console.log(`createdAt: ${resume.createdAt}`);
+      console.log(`updatedAt: ${resume.updatedAt}`);
+      console.log(`summary: ${resume.parsed?.summary}`);
+      console.log(`skills.length: ${resume.parsed?.skills?.length || 0}`);
+      console.log(`experience.length: ${resume.parsed?.experience?.length || 0}`);
+      console.log(`education.length: ${resume.parsed?.education?.length || 0}`);
+      console.log(`ocrText.length: ${resume.ocrText?.length || 0}`);
+    }
+    console.log(`GitHub data: ${req.body.repos ? JSON.stringify(req.body.repos) : 'N/A'}`);
+    console.log(`Job data: ${req.body.job || req.body.jobDescription ? JSON.stringify(req.body.job || req.body.jobDescription) : 'N/A'}`);
+    console.log(`Prompt Preview: (printed in AIGateway/AIPrompts)`);
+    console.log(`Gemini Response: ${responseData ? JSON.stringify(responseData) : 'N/A'}`);
+    console.log(`API Response: ${responseData ? JSON.stringify(responseData) : 'N/A'}`);
+    console.log(`--------------------------------------\n`);
+  }
+};
+
+const checkFallback = (obj, funcName) => {
+  if (obj && (obj.name === 'Unknown' || obj.summary === 'Resume content could not be parsed.')) {
+    console.error(`\n[FATAL BUG] Fallback object received in ${funcName}!`);
+    console.error(`Function: ${funcName}`);
+    console.error(new Error('Stack Trace').stack);
+    process.exit(1);
+  }
+};
 
 exports.uploadResume = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
 
-    // Resume parsing and authenticity are forced on upload
-    const parsed = await aiService.parseResume(req.file.path, req.user._id, { forceRegenerate: true });
-    const authenticity = await aiService.checkAuthenticity({}, req.user._id, { forceRegenerate: true });
+    // STEP 1: Log uploaded filename
+    Logger.ocr(`[OCR] Uploaded Filename: ${req.file.originalname}`);
+
+    // STEP 2: Log whether OCR or pdf-parse was used
+    const ocrResult = await OCRService.parse(req.file.path);
+    Logger.ocr(`[OCR]\nSource: ${ocrResult.source}\nCharacters: ${ocrResult.text ? ocrResult.text.length : 0}\nPreview (first 500 chars):\n${ocrResult.text ? ocrResult.text.substring(0, 500) : 'None'}\n`);
+
+    Logger.pipeline({
+      stage: 'OCR Extraction',
+      input: `File Path: ${req.file.path}`,
+      output: `Source: ${ocrResult.source}, Characters: ${ocrResult.text ? ocrResult.text.length : 0}`,
+      status: 'SUCCESS',
+      reason: 'Extracted text from uploaded resume file'
+    });
+
+    // STEP 3: Before saving into MongoDB print text length & preview
+    Logger.resume(`[Database Save Request]\nResume Text Length: ${ocrResult.text ? ocrResult.text.length : 0}\nResume Preview:\n${ocrResult.text ? ocrResult.text.substring(0, 200) : 'None'}\n`);
+
+    // Continue Gemini pipeline passing ocrText
+    const parsed = await aiService.parseResume(req.file.path, req.user._id, { 
+      forceRegenerate: true,
+      ocrText: ocrResult.text
+    });
+
+    Logger.pipeline({
+      stage: 'Resume Parsing',
+      input: `OCR text length: ${ocrResult.text ? ocrResult.text.length : 0}`,
+      output: `Candidate Name: ${parsed.parsed?.name || 'Unknown'}, Skills Count: ${parsed.parsed?.skills?.length || 0}, ATS Score: ${parsed.score}`,
+      status: 'SUCCESS',
+      reason: 'Parsed resume structure and details using Gemini'
+    });
+    
+    // Pass the extracted ocrText to authenticity checker
+    const authenticity = await aiService.checkAuthenticity({ parsed: parsed.parsed, ocrText: ocrResult.text }, req.user._id, { forceRegenerate: true });
+    
+    Logger.pipeline({
+      stage: 'Authenticity Check',
+      input: 'Parsed details and OCR text',
+      output: `Authenticity Score: ${authenticity.authenticityScore}`,
+      status: 'SUCCESS',
+      reason: 'Verified candidate employment and skill claims authenticity'
+    });
+    
     const score = Math.max(0, Math.min(100, parsed.score || 70));
+
+    // Clear isPrimary from older user resumes
+    await Resume.updateMany({ user: req.user._id }, { isPrimary: false });
 
     const resume = await Resume.create({
       user: req.user._id,
@@ -17,7 +112,21 @@ exports.uploadResume = async (req, res) => {
       filepath: req.file.path,
       parsed: parsed.parsed,
       score,
-      authenticityScore: authenticity.authenticityScore
+      authenticityScore: authenticity.authenticityScore,
+      ocrText: ocrResult.text,
+      ocrSource: ocrResult.source,
+      ocrProcessedAt: new Date()
+    });
+
+    // STEP 4: After reading/writing to MongoDB print stored metrics
+    Logger.resume(`[Database Stored]\nStored Resume Length: ${resume.ocrText ? resume.ocrText.length : 0}\nStored Resume Preview:\n${resume.ocrText ? resume.ocrText.substring(0, 200) : 'None'}\n`);
+
+    Logger.pipeline({
+      stage: 'Database Storage',
+      input: 'Resume details mapping',
+      output: `Database Document ID: ${resume._id}`,
+      status: 'SUCCESS',
+      reason: 'Saved processed resume details to MongoDB'
     });
 
     res.status(201).json({ success: true, resume });
@@ -40,6 +149,12 @@ exports.getResume = async (req, res) => {
   try {
     const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id });
     if (!resume) return res.status(404).json({ success: false, message: 'Resume not found' });
+    
+    checkFallback(resume.parsed, 'getResume');
+    
+    printPipelineStep('Resume Retrieval API', JSON.stringify({ id: req.params.id }), JSON.stringify(resume), 'SUCCESS', 'Loaded resume from DB');
+    printEndpointDebug('Get Resume / API Response', req, resume, resume);
+    
     res.json({ success: true, resume });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -51,10 +166,18 @@ exports.simulateResume = async (req, res) => {
     const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id });
     if (!resume) return res.status(404).json({ success: false, message: 'Resume not found' });
     
+    checkFallback(resume.parsed, 'simulateResume');
+    
     // Explicit simulation trigger
     const simulation = await aiService.simulateResume(resume, req.body.scenarios, req.user._id, { forceRegenerate: true });
+    checkFallback(simulation, 'simulateResume');
+    
     resume.simulationResults = simulation;
     await resume.save();
+    
+    printPipelineStep('Resume Simulation', JSON.stringify({ resumeId: resume._id, scenarios: req.body.scenarios }), JSON.stringify(simulation), 'SUCCESS', 'Executed resume simulation');
+    printEndpointDebug('Resume Simulation', req, resume, simulation);
+    
     res.json({ success: true, simulation });
   } catch (error) {
     if (error.status === 429) return res.status(429).json({ success: false, message: error.message });
@@ -67,10 +190,18 @@ exports.dynamicResume = async (req, res) => {
     const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id });
     if (!resume) return res.status(404).json({ success: false, message: 'Resume not found' });
     
+    checkFallback(resume.parsed, 'dynamicResume');
+    
     // Explicit tailoring trigger
     const dynamic = await aiService.generateDynamicResume(resume, req.body.job, req.user._id, { forceRegenerate: true });
+    checkFallback(dynamic, 'dynamicResume');
+    
     resume.dynamicVersion = JSON.stringify(dynamic);
     await resume.save();
+    
+    printPipelineStep('Dynamic Resume', JSON.stringify({ resumeId: resume._id, job: req.body.job }), JSON.stringify(dynamic), 'SUCCESS', 'Executed dynamic resume tailoring');
+    printEndpointDebug('Dynamic Resume', req, resume, dynamic);
+    
     res.json({ success: true, dynamic });
   } catch (error) {
     if (error.status === 429) return res.status(429).json({ success: false, message: error.message });
@@ -84,14 +215,23 @@ exports.improvementReport = async (req, res) => {
     const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id });
     if (!resume) return res.status(404).json({ success: false, message: 'Resume not found' });
     
+    checkFallback(resume.parsed, 'improvementReport');
+    
     const cached = await AICache.findOne({ userId: req.user._id, featureName: 'improvement-report' });
     if (!cached && !force) {
+      printPipelineStep('Improvement Report', JSON.stringify({ resumeId: resume._id, force }), 'null', 'SUCCESS', 'Returned empty report due to cache miss and force=false');
       return res.json({ success: true, report: null });
     }
     
     const report = await aiService.generateImprovementReport(resume, req.user._id, { forceRegenerate: force });
+    checkFallback(report, 'improvementReport');
+    
     resume.improvementReport = report;
     await resume.save();
+    
+    printPipelineStep('Improvement Report', JSON.stringify({ resumeId: resume._id, force }), JSON.stringify(report), 'SUCCESS', 'Generated improvement report');
+    printEndpointDebug('Improvement Report', req, resume, report);
+    
     res.json({ success: true, report });
   } catch (error) {
     if (error.status === 429) return res.status(429).json({ success: false, message: error.message });
@@ -105,12 +245,18 @@ exports.getTimeline = async (req, res) => {
     const resume = await Resume.findOne({ _id: req.params.id, user: req.user._id });
     if (!resume) return res.status(404).json({ success: false, message: 'Resume not found' });
     
+    checkFallback(resume.parsed, 'getTimeline');
+    
     const cached = await AICache.findOne({ userId: req.user._id, featureName: 'resume-timeline' });
     if (!cached && !force) {
       return res.json({ success: true, timeline: null });
     }
     
     const timeline = await aiService.generateTimeline(resume, req.user._id, { forceRegenerate: force });
+    
+    printPipelineStep('Resume Timeline', JSON.stringify({ resumeId: resume._id, force }), JSON.stringify(timeline), 'SUCCESS', 'Generated resume timeline');
+    printEndpointDebug('Resume Timeline', req, resume, timeline);
+    
     res.json({ success: true, timeline });
   } catch (error) {
     if (error.status === 429) return res.status(429).json({ success: false, message: error.message });
@@ -463,6 +609,8 @@ exports.optimizeResume = async (req, res) => {
     const resume = await Resume.findOne({ _id: req.params.resumeId, user: req.user._id });
     if (!resume) return res.status(404).json({ success: false, message: 'Resume not found' });
 
+    checkFallback(resume.parsed, 'optimizeResume');
+
     const originalSkills = resume.parsed?.skills || [];
     
     const jdLower = jobDescription.toLowerCase();
@@ -483,13 +631,18 @@ exports.optimizeResume = async (req, res) => {
     
     await resume.save();
 
-    res.json({
+    const result = {
       success: true,
       currentAtsMatch: 75,
       improvedAtsMatch: 95,
       missingKeywords,
       resume
-    });
+    };
+
+    printPipelineStep('Resume ATS & Suggestions', JSON.stringify({ resumeId: resume._id, jobDescription }), JSON.stringify(result), 'SUCCESS', 'Executed local resume ATS keyword tailoring');
+    printEndpointDebug('Resume ATS / Suggestions', req, resume, result);
+
+    res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

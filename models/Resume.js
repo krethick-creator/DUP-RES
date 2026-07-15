@@ -31,6 +31,11 @@ const resumeSchema = new mongoose.Schema({
   improvementReport: { type: mongoose.Schema.Types.Mixed, default: {} },
   isPrimary: { type: Boolean, default: true },
   
+  // OCR metadata
+  ocrText: { type: String },
+  ocrSource: { type: String },
+  ocrProcessedAt: { type: Date },
+  
   // Theme Marketplace customizer settings
   selectedTheme: { type: String, default: 'Classic Modern' },
   themeCustomization: {

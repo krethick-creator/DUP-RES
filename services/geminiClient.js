@@ -9,7 +9,7 @@ const getGeminiClient = () => {
         if (!config.gemini.apiKey) {
             throw new Error('GEMINI_API_KEY is not configured');
         }
-        client = new GoogleGenAI({ apiKey: config.gemini.apiKey });
+        client = new GoogleGenAI({ apiKey: config.gemini.apiKey.trim() });
     }
     return client;
 };
@@ -34,7 +34,7 @@ const extractText = (response) => {
 const generateStructuredContent = async (prompt, options = {}) => {
     const ai = getGeminiClient();
     const response = await ai.models.generateContent({
-        model: options.model || 'gemini-2.5-flash',
+        model: options.model || require('./AIModelDiscovery').resolvedFastModel || '',
         contents: prompt,
         config: {
             temperature: options.temperature ?? 0.2,

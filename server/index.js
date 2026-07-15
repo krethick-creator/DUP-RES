@@ -7,6 +7,7 @@ const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const config = require('../config');
 const connectDB = require('../database/connection');
+const Logger = require('../utils/logger');
 
 const app = express();
 
@@ -14,7 +15,6 @@ const app = express();
 const uploadDir = path.join(__dirname, '../public/uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-connectDB();
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: config.clientUrl, credentials: true }));
@@ -34,6 +34,8 @@ app.use('/api/ai', require('../routes/ai'));
 app.use('/api/github', require('../routes/github'));
 app.use('/api/org', require('../routes/org'));
 app.use('/api/linkedin', require('../routes/linkedin'));
+app.use('/api/ocr', require('../routes/ocr'));
+
 
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
@@ -48,7 +50,7 @@ app.get('*', (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  Logger.error(err.stack);
   res.status(500).json({ success: false, message: err.message || 'Server Error' });
 });
 
@@ -66,11 +68,11 @@ const io = socketIo(server, {
 app.set('socketio', io);
 
 io.on('connection', (socket) => {
-  console.log('[Socket] Member connected:', socket.id);
+  Logger.info('[Socket] Member connected:', socket.id);
 
   socket.on('join_org', (orgId) => {
     socket.join(orgId);
-    console.log(`[Socket] Member ${socket.id} joined Org room: ${orgId}`);
+    Logger.info(`[Socket] Member ${socket.id} joined Org room: ${orgId}`);
   });
 
   socket.on('typing', (data) => {
@@ -78,14 +80,32 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('[Socket] Member disconnected:', socket.id);
+    Logger.info('[Socket] Member disconnected:', socket.id);
   });
 });
 
 const PORT = config.port;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Open http://localhost:${PORT}`);
-});
+
+const startServer = async () => {
+  try {
+    // 1. Connect to Database
+    await connectDB();
+
+    // 2. Initialize Model Discovery and run candidate verifications
+    const AIModelDiscovery = require('../services/AIModelDiscovery');
+    await AIModelDiscovery.init();
+
+    // 3. Start Express server and accept connections
+    server.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      Logger.debug(`Open http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    Logger.error('Failed to start server:', err);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 module.exports = app;

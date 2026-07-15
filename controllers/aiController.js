@@ -527,7 +527,7 @@ exports.getCandidateInsights = async (req, res) => {
 // ==========================================
 
 const AIContextBuilder = require('../services/AIContextBuilder');
-const { generateStructuredContent } = require('../services/geminiClient');
+const PromptBuilder = require('../services/PromptBuilder');
 
 const MOCK_FILES = {
   'package.json': `{
@@ -842,50 +842,10 @@ exports.projectWorkspaceChat = async (req, res) => {
     const fullContext = await AIContextBuilder.buildContext(targetUserId);
     const textContext = AIContextBuilder.formatPromptContext(fullContext);
 
-    // AI summary cached inside database
-    const featureName = `project-chat-${repoName}-${question.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '')}`;
-    const cached = await AICache.findOne({ userId: targetUserId, featureName });
-    if (cached) {
-      return res.json({ success: true, response: cached.generatedData.response, source: 'cache' });
-    }
+    const options = { payload: { repoName, question } };
+    const responseData = await aiService.handleProjectChat(repoName, question, textContext, targetUserId, options);
 
-    const prompt = `
-      You are the AI Project Knowledge Assistant.
-      Answer the question about this repository "${repoName}" based ONLY on the candidate's profile, resume, LinkedIn, and GitHub repositories.
-      
-      Here is the unified candidate context:
-      ${textContext}
-
-      Current Question: "${question}"
-      
-      Formulate a detailed, premium, professional markdown response answering the question. If the user asks about Docker, JWT, database, etc. explain it reference to the files and details provided. Do not invent any outside details, rely on standard implementations matching their technologies.
-      
-      Return a JSON object:
-      {
-        "response": "markdown response here"
-      }
-    `;
-
-    let responseText = "Placeholder explanation: This project uses a full-stack node and react environment. JWT is implemented for secure token validation. Express middleware handles credentials parsing.";
-    if (process.env.AI_ENABLED === "true") {
-      try {
-        const result = await generateStructuredContent(prompt, { temperature: 0.3 });
-        if (result && result.response) {
-          responseText = result.response;
-        }
-      } catch (err) {
-        console.error('Gemini call failed in IDE assistant chat:', err);
-      }
-    }
-
-    const dataToSave = { response: responseText };
-    await AICache.findOneAndUpdate(
-      { userId: targetUserId, featureName },
-      { userId: targetUserId, featureName, generatedData: dataToSave, lastActualCallAt: new Date() },
-      { upsert: true }
-    );
-
-    res.json({ success: true, response: responseText });
+    res.json({ success: true, response: responseData.response });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -898,109 +858,13 @@ exports.getProjectIntelligence = async (req, res) => {
     const repoName = req.params.repoName;
     const force = req.query.regenerate === 'true';
 
-    const featureName = `project-intelligence-${repoName}`;
-    if (!force) {
-      const cached = await AICache.findOne({ userId: targetUserId, featureName });
-      if (cached) {
-        return res.json({ success: true, intelligence: cached.generatedData, source: 'cache' });
-      }
-    }
-
     const fullContext = await AIContextBuilder.buildContext(targetUserId);
     const textContext = AIContextBuilder.formatPromptContext(fullContext);
 
-    const prompt = `
-      Analyze the repository "${repoName}" for candidate ${fullContext.profile.name}.
-      Based on the profile, project context, and file list, evaluate the following:
-      - Project Overview
-      - Architecture Summary
-      - Folder Explanation
-      - Technology Stack
-      - Database Flow
-      - Authentication Flow
-      - API Flow
-      - Dependencies
-      - Code Complexity Score (1-100)
-      - Contribution Summary
-      - Repository Timeline
-      - Commit Summary
-      - Important Files
-      - Unused Files
-      - Dead Code Detection
-      - Security Warnings
-      - Project Score (1-100)
-      - Portfolio Score (1-100)
-      - Technical Score (1-100)
-      - Interview Difficulty (Easy/Medium/Hard)
-      - ATS Project Score (1-100)
+    const options = { forceRegenerate: force };
+    const intelligence = await aiService.handleProjectIntelligence(repoName, textContext, targetUserId, options);
 
-      Return a JSON object exactly with these fields:
-      {
-        "projectOverview": "Description",
-        "architectureSummary": "Summary",
-        "folderExplanation": "Explanation",
-        "techStack": ["React", "Express", "MongoDB"],
-        "databaseFlow": "Flow description",
-        "authFlow": "Auth flow details",
-        "apiFlow": "API paths description",
-        "dependencies": ["express", "mongoose"],
-        "codeComplexity": 78,
-        "contributionSummary": "Contribution details",
-        "timeline": "Timeline summary",
-        "commitSummary": "Commits summary",
-        "importantFiles": ["server.js", "controllers/authController.js"],
-        "unusedFiles": ["test-old.js"],
-        "deadCode": "Dead code details",
-        "securityWarnings": ["Outdated packages", "JWT secret hardcoded in fallback mode"],
-        "projectScore": 85,
-        "portfolioScore": 88,
-        "technicalScore": 90,
-        "interviewDifficulty": "Medium",
-        "atsScore": 87
-      }
-    `;
-
-    const fallback = {
-      projectOverview: "An advanced Full-Stack Talent Management platform utilizing AI engines for parsing, evaluating, and filtering candidate profiles.",
-      architectureSummary: "A Model-View-Controller (MVC) server-side layout built with Express, integrated with a React Single Page Application frontend.",
-      folderExplanation: "Root contains the backend files, server.js handles connection, models holds schemas, client contains client dashboard UI assets.",
-      techStack: ["Node.js", "Express.js", "React.js", "MongoDB", "Socket.IO", "Monaco Editor"],
-      databaseFlow: "Candidate profiles are synced and stored in MongoDB. AI caching layers are saved inside AICache schema.",
-      authFlow: "Uses JSON Web Token (JWT) verification inside Express middleware and local browser token storage.",
-      apiFlow: "REST APIs are available under /api/auth, /api/github, and /api/ai endpoints.",
-      dependencies: ["express", "mongoose", "jsonwebtoken", "bcryptjs", "socket.io"],
-      codeComplexity: 78,
-      contributionSummary: "Strong commit velocity with documentation benchmarks. Focused on core components, database integration, and helper scripts.",
-      timeline: "Development started recently with major contributions to authorization and model setups.",
-      commitSummary: "Initial schema creation, auth controller implementation, front-end dashboard alignment.",
-      importantFiles: ["server.js", "controllers/authController.js", "models/User.js"],
-      unusedFiles: ["temp-script.js"],
-      deadCode: "No significant dead code identified. Deprecated local auth paths are clean.",
-      securityWarnings: ["Hardcoded secrets in default settings", "Limiter package configuration missing production rates"],
-      projectScore: 84,
-      portfolioScore: 82,
-      technicalScore: 86,
-      interviewDifficulty: "Medium",
-      atsScore: 85
-    };
-
-    let resultData = fallback;
-    if (process.env.AI_ENABLED === "true") {
-      try {
-        const result = await generateStructuredContent(prompt, { temperature: 0.2 });
-        if (result) resultData = { ...fallback, ...result };
-      } catch (err) {
-        console.error('Gemini call failed for project intelligence:', err);
-      }
-    }
-
-    await AICache.findOneAndUpdate(
-      { userId: targetUserId, featureName },
-      { userId: targetUserId, featureName, generatedData: resultData, lastActualCallAt: new Date() },
-      { upsert: true }
-    );
-
-    res.json({ success: true, intelligence: resultData });
+    res.json({ success: true, intelligence });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -1013,91 +877,13 @@ exports.getProjectVisualizations = async (req, res) => {
     const repoName = req.params.repoName;
     const force = req.query.regenerate === 'true';
 
-    const featureName = `project-viz-${repoName}`;
-    if (!force) {
-      const cached = await AICache.findOne({ userId: targetUserId, featureName });
-      if (cached) {
-        return res.json({ success: true, visualizations: cached.generatedData, source: 'cache' });
-      }
-    }
-
     const fullContext = await AIContextBuilder.buildContext(targetUserId);
     const textContext = AIContextBuilder.formatPromptContext(fullContext);
 
-    const prompt = `
-      Create architecture, database, dependency, and mind map visualizations for candidate ${fullContext.profile.name}'s repository "${repoName}".
-      Provide clean, working Mermaid.js diagrams for:
-      - Dependency Graph
-      - Architecture Diagram
-      - Database Relationship Diagram
-      - API Flow Diagram
-      - Technology Mind Map
+    const options = { forceRegenerate: force };
+    const visualizations = await aiService.handleProjectVisualizations(repoName, textContext, targetUserId, options);
 
-      Return a JSON object exactly with these fields:
-      {
-        "dependencyGraph": "Mermaid diagram code here",
-        "architectureDiagram": "Mermaid diagram code here",
-        "databaseDiagram": "Mermaid diagram code here",
-        "apiFlowDiagram": "Mermaid diagram code here",
-        "mindMap": "Mermaid diagram code here"
-      }
-    `;
-
-    const fallback = {
-      dependencyGraph: `graph TD
-  App[app.js] --> Express[express]
-  App --> Mongoose[mongoose]
-  App --> JWT[jsonwebtoken]
-  Mongoose --> MongoDB[(MongoDB)]`,
-      architectureDiagram: `graph LR
-  Client[SPA Client] <--> LoadBalancer[Express Port 5000]
-  LoadBalancer <--> Controllers[Controllers]
-  Controllers <--> Models[Mongoose Models]
-  Models <--> DB[(MongoDB Cache)]`,
-      databaseDiagram: `erDiagram
-  User ||--o{ Resume : uploads
-  User ||--o{ Assessment : completes
-  User ||--o{ GitHubRepository : syncs
-  User {
-    string id
-    string name
-    string email
-  }
-  Resume {
-    string filename
-    string score
-  }`,
-      apiFlowDiagram: `graph TD
-  Request[Client Request] --> AuthCheck{Auth Middleware}
-  AuthCheck -- Success --> Controller[Execute Controller]
-  AuthCheck -- Fail --> Error[401 Unauthorized]
-  Controller --> DBQuery[Mongoose DB Call]
-  DBQuery --> Response[Send JSON Response]`,
-      mindMap: `graph TD
-  Root[Project Stack]
-  Root --> Backend[Node.js / Express]
-  Root --> Frontend[Vanilla SPA / Charts]
-  Root --> Database[MongoDB Cache]
-  Root --> AI[Gemini 2.5 API]`
-    };
-
-    let resultData = fallback;
-    if (process.env.AI_ENABLED === "true") {
-      try {
-        const result = await generateStructuredContent(prompt, { temperature: 0.2 });
-        if (result) resultData = { ...fallback, ...result };
-      } catch (err) {
-        console.error('Gemini call failed for project visualizations:', err);
-      }
-    }
-
-    await AICache.findOneAndUpdate(
-      { userId: targetUserId, featureName },
-      { userId: targetUserId, featureName, generatedData: resultData, lastActualCallAt: new Date() },
-      { upsert: true }
-    );
-
-    res.json({ success: true, visualizations: resultData });
+    res.json({ success: true, visualizations });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

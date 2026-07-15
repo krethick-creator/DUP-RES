@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OCR Extraction Test - TalentAI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #111827;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --success: #10b981;
+    }
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      width: 90%;
+      max-width: 800px;
+      background: rgba(255, 255, 255, 0.02);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      background: linear-gradient(135deg, #a5b4fc, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p {
+      color: var(--text-muted);
+      margin: 0;
+      font-size: 14px;
+    }
+    .upload-zone {
+      border: 2px dashed var(--border-color);
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, 0.01);
+      margin-bottom: 24px;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.03);
+    }
+    .upload-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      color: var(--text-muted);
+    }
+    .file-input {
+      display: none;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      background: var(--primary-hover);
+    }
+    .btn:disabled {
+      background: var(--text-muted);
+      cursor: not-allowed;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin: 24px 0;
+      display: none;
+    }
+    .metric-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .metric-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .metric-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--success);
+    }
+    .output-container {
+      display: none;
+      margin-top: 24px;
+    }
+    .output-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+    }
+    .output-box {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      font-family: monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .status-msg {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border-left-color: var(--primary);
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>OCR Extraction Test Panel</h1>
+    <p>Upload Resumes, Image Resumes, Certificates, Transcripts, and evaluate parsing methods</p>
+  </div>
+
+  <div class="upload-zone" id="drop-zone">
+    <div class="upload-icon">📄</div>
+    <div style="font-weight: 500; margin-bottom: 6px;">Select a file to parse</div>
+    <div style="font-size: 12px; color: var(--text-muted);">Supports PDF, PNG, JPG, JPEG</div>
+    <input type="file" class="file-input" id="file-selector" accept=".pdf,.png,.jpg,.jpeg">
+  </div>
+
+  <button class="btn" id="extract-btn" disabled>Extract Text</button>
+
+  <div class="status-msg" id="status-container" style="display: none;">
+    <div class="spinner"></div> Processing document OCR...
+  </div>
+
+  <div class="metrics" id="metrics-container">
+    <div class="metric-card">
+      <div class="metric-label">Detected Source</div>
+      <div class="metric-val" id="val-source">-</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Character Count</div>
+      <div class="metric-val" id="val-chars">-</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Processing Time</div>
+      <div class="metric-val" id="val-time">-</div>
+    </div>
+  </div>
+
+  <div class="output-container" id="result-container">
+    <div class="output-title">Extracted Text Output</div>
+    <div class="output-box" id="result-box"></div>
+  </div>
+</div>
+
+<script>
+  const dropZone = document.getElementById('drop-zone');
+  const fileSelector = document.getElementById('file-selector');
+  const extractBtn = document.getElementById('extract-btn');
+  const statusContainer = document.getElementById('status-container');
+  const metricsContainer = document.getElementById('metrics-container');
+  const resultContainer = document.getElementById('result-container');
+  const resultBox = document.getElementById('result-box');
+
+  const valSource = document.getElementById('val-source');
+  const valChars = document.getElementById('val-chars');
+  const valTime = document.getElementById('val-time');
+
+  let selectedFile = null;
+
+  dropZone.addEventListener('click', () => fileSelector.click());
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  fileSelector.addEventListener('change', (e) => {
+    if (e.target.files.length) {
+      handleFile(e.target.files[0]);
+    }
+  });
+
+  function handleFile(file) {
+    selectedFile = file;
+    dropZone.innerHTML = `
+      <div class="upload-icon" style="color: var(--primary);">✓</div>
+      <div style="font-weight: 600; color: #fff;">${file.name}</div>
+      <div style="font-size: 12px; color: var(--text-muted);">${(file.size / 1024).toFixed(1)} KB</div>
+    `;
+    extractBtn.removeAttribute('disabled');
+  }
+
+  extractBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    extractBtn.setAttribute('disabled', 'true');
+    statusContainer.style.display = 'block';
+    metricsContainer.style.display = 'none';
+    resultContainer.style.display = 'none';
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    const startTime = Date.now();
+
+    try {
+      const res = await fetch('/api/ocr/test', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+
+      statusContainer.style.display = 'none';
+      extractBtn.removeAttribute('disabled');
+
+      if (data.success) {
+        valSource.textContent = data.source.toUpperCase();
+        valChars.textContent = data.characters;
+        valTime.textContent = duration + 'ms';
+        
+        // Use preview or full text if available
+        resultBox.textContent = data.preview + (data.characters > 500 ? '\n\n... (output truncated to first 500 characters) ...' : '');
+        
+        metricsContainer.style.display = 'grid';
+        resultContainer.style.display = 'block';
+      } else {
+        alert('OCR Failed: ' + (data.error || 'Unknown error occurred.'));
+      }
+    } catch (err) {
+      statusContainer.style.display = 'none';
+      extractBtn.removeAttribute('disabled');
+      alert('Network request failed: ' + err.message);
+    }
+  });
+</script>
+</body>
+</html>
