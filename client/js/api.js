@@ -67,8 +67,8 @@ const API = {
 
    // Resumes
   uploadResume: (formData) => API.post('/resumes/upload', formData),
-  createManualResume: (data) => API.post('/resumes/manual', data),
   getResumes: () => API.get('/resumes'),
+  createManualResume: () => API.post('/resumes/manual', {}),
   updateResumeContent: (id, data) => API.put(`/resumes/${id}`, data),
   generateAIResume: () => API.post('/resumes/generate-ai', {}),
   simulateResume: (id, scenarios) => API.post(`/resumes/${id}/simulate`, { scenarios }),

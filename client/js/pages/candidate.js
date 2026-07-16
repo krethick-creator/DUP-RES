@@ -201,6 +201,10 @@ const CandidateDashboard = {
     const ghConnected = this.user?.githubConnected;
     const liConnected = this.user?.linkedinConnected;
     const googleConnected = this.user?.googleConnected;
+    const leetCodeConnected = this.user?.leetCodeConnected;
+    const hackerRankConnected = this.user?.hackerRankConnected;
+    const leetCodeUsername = this.user?.leetCodeUsername || '';
+    const hackerRankUsername = this.user?.hackerRankUsername || '';
 
     return `
       <div class="page-header"><h2>Profile</h2><p class="text-secondary">Manage your personal information</p></div>
@@ -291,6 +295,8 @@ const CandidateDashboard = {
                 </div>
               </div>
             </div>
+
+            ${this.renderProfessionalCodingProfiles()}
 
             <!-- Candidate Email Status -->
             <div class="flex justify-between items-center p-4 rounded" style="background:var(--bg-secondary); border: 1px solid var(--border-color)">
@@ -1584,6 +1590,22 @@ const CandidateDashboard = {
         e.target.disabled = false;
         e.target.textContent = 'Sync Again';
       }
+    });
+
+    document.getElementById('connect-gmail-btn')?.addEventListener('click', () => {
+      window.location.href = `/api/auth/google?token=${API.token}`;
+    });
+
+    document.getElementById('disconnect-gmail-btn')?.addEventListener('click', async () => {
+      try {
+        await API.post('/auth/google/disconnect');
+        UI.toast('Gmail account disconnected', 'success');
+        const data = await API.getMe();
+        if (data && data.user) API.setUser(data.user);
+        const html = await this.render('profile');
+        document.getElementById('app').innerHTML = html;
+        this.bind();
+      } catch (err) { UI.toast(err.message, 'error'); }
     });
 
         // ==========================================
@@ -4540,7 +4562,7 @@ const CandidateDashboard = {
       </div>`;
   },
 
-  bind() {
+  disabled_duplicate_bind() {
     UI.bindDashboardEvents((section) => {
       window.location.hash = `#/candidate/${section}`;
     });

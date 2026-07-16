@@ -25,15 +25,13 @@ const resumeSchema = new mongoose.Schema({
     }],
     projects: [{
       title: String,
-      technologies: String,
+      technologiesUsed: [String],
       description: String
     }],
     certifications: [String],
     languages: [String],
-    socialLinks: [{
-      platform: String,
-      url: String
-    }]
+    achievements: [String],
+    links: [String]
   },
   score: { type: Number, default: 0 },
   authenticityScore: { type: Number, default: 100 },
@@ -55,8 +53,10 @@ const resumeSchema = new mongoose.Schema({
     secondaryColor: { type: String, default: '#475569' },
     fontFamily: { type: String, default: 'Inter' },
     fontSize: { type: Number, default: 12 },
+    lineHeight: { type: Number, default: 1.5 },
     margins: { type: Number, default: 20 },
     borderRadius: { type: Number, default: 4 },
+    sectionSpacing: { type: Number, default: 16 },
     skillProgressStyle: { type: String, default: 'tags' },
     sectionOrder: [{ type: String }],
     hiddenSections: [{ type: String }],

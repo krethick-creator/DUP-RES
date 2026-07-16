@@ -136,41 +136,6 @@ exports.uploadResume = async (req, res) => {
   }
 };
 
-exports.createManualResume = async (req, res) => {
-  try {
-    const Resume = require('../models/Resume');
-    // Clear isPrimary from older user resumes
-    await Resume.updateMany({ user: req.user._id }, { isPrimary: false });
-
-    const resume = await Resume.create({
-      user: req.user._id,
-      filename: req.body.filename || 'My_Resume.json',
-      filepath: 'manual',
-      parsed: {
-        name: req.user.name || 'Your Name',
-        email: req.user.email || 'yourname@example.com',
-        phone: '',
-        location: '',
-        summary: 'Experienced professional.',
-        skills: ['JavaScript'],
-        experience: [],
-        education: [],
-        projects: [],
-        certifications: [],
-        languages: [],
-        socialLinks: []
-      },
-      score: 80,
-      authenticityScore: 100,
-      isPrimary: true
-    });
-
-    res.status(201).json({ success: true, resume });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
 exports.getResumes = async (req, res) => {
   try {
     const resumes = await Resume.find({ user: req.user._id }).sort('-createdAt');
@@ -307,33 +272,20 @@ const fs = require('fs');
 const path = require('path');
 
 const originalThemes = [
-  'google-professional', 'microsoft-professional', 'amazon-professional', 'apple-minimal',
-  'meta-modern', 'stripe-clean', 'vercel-dark', 'openai-minimal', 'modern-professional',
-  'minimal-professional', 'executive', 'executive-dark', 'creative', 'startup', 'technology',
-  'backend-engineer', 'frontend-engineer', 'fullstack', 'nodejs', 'python', 'java', 'dotnet',
-  'react', 'angular', 'vue', 'ai-engineer', 'machine-learning', 'data-scientist', 'cyber-security',
-  'cloud-engineer', 'aws', 'azure', 'gcp', 'devops', 'research', 'academic', 'healthcare',
-  'marketing', 'finance', 'sales', 'product-manager', 'business-analyst', 'student', 'internship',
-  'graduate', 'government', 'international', 'europass'
+  'modern', 'professional', 'minimal', 'corporate', 'creative', 'developer', 'executive', 'classic', 'ats-friendly', 'dark'
 ];
 
 const categoryMapping = {
-  'google-professional': 'Professional', 'microsoft-professional': 'Professional',
-  'amazon-professional': 'Professional', 'apple-minimal': 'Minimal', 'meta-modern': 'Creative',
-  'stripe-clean': 'Professional', 'vercel-dark': 'Technology', 'openai-minimal': 'Minimal',
-  'modern-professional': 'Professional', 'minimal-professional': 'Minimal',
-  'executive': 'Executive', 'executive-dark': 'Executive', 'creative': 'Creative',
-  'startup': 'Business', 'technology': 'Technology', 'backend-engineer': 'Technology',
-  'frontend-engineer': 'Technology', 'fullstack': 'Technology', 'nodejs': 'Technology',
-  'python': 'Technology', 'java': 'Technology', 'dotnet': 'Technology', 'react': 'Technology',
-  'angular': 'Technology', 'vue': 'Technology', 'ai-engineer': 'Technology',
-  'machine-learning': 'Technology', 'data-scientist': 'Technology', 'cyber-security': 'Technology',
-  'cloud-engineer': 'Technology', 'aws': 'Technology', 'azure': 'Technology', 'gcp': 'Technology',
-  'devops': 'Technology', 'research': 'Research', 'academic': 'Research', 'healthcare': 'Business',
-  'marketing': 'Creative', 'finance': 'Business', 'sales': 'Business', 'product-manager': 'Business',
-  'business-analyst': 'Business', 'student': 'Student', 'internship': 'Student',
-  'graduate': 'Student', 'government': 'Professional', 'international': 'Professional',
-  'europass': 'Professional'
+  'modern': 'Modern',
+  'professional': 'Professional',
+  'minimal': 'Minimal',
+  'corporate': 'Corporate',
+  'creative': 'Creative',
+  'developer': 'Developer',
+  'executive': 'Executive',
+  'classic': 'Classic',
+  'ats-friendly': 'ATS Friendly',
+  'dark': 'Dark'
 };
 
 const themesList = originalThemes.map((name, index) => {
@@ -534,11 +486,16 @@ exports.getThemeById = async (req, res) => {
 
 exports.applyTheme = async (req, res) => {
   try {
-    const { themeName } = req.body;
+    const themeNameInput = req.body.themeName || req.body.themeKey || '';
+    const cleanInput = themeNameInput.toLowerCase().replace(/\s+/g, '-');
+    const theme = themesList.find(t => 
+      t.key === cleanInput || 
+      t.name.toLowerCase() === themeNameInput.toLowerCase() || 
+      t.key === themeNameInput.toLowerCase()
+    ) || themesList[0];
+
     const resume = await Resume.findOne({ _id: req.params.resumeId, user: req.user._id });
     if (!resume) return res.status(404).json({ success: false, message: 'Resume not found' });
-
-    const theme = themesList.find(t => t.name === themeName || t.key === themeName) || themesList[0];
     
     // Create new history version before applying
     const currentVersionNumber = (resume.versions?.length || 0) + 1;
@@ -713,6 +670,47 @@ exports.restoreVersion = async (req, res) => {
   }
 };
 
+exports.createManualResume = async (req, res) => {
+  try {
+    const resume = await Resume.create({
+      user: req.user._id,
+      filename: 'Manual_Resume.pdf',
+      filepath: 'manual-builder',
+      parsed: {
+        name: req.user.name || 'Your Name',
+        email: req.user.email || 'yourname@example.com',
+        phone: '',
+        location: '',
+        summary: 'Experienced professional.',
+        skills: ['JavaScript'],
+        experience: [],
+        education: [],
+        projects: [],
+        certifications: [],
+        languages: [],
+        achievements: [],
+        links: []
+      },
+      themeCustomization: {
+        accentColor: '#2563EB',
+        primaryColor: '#0F172A',
+        secondaryColor: '#475569',
+        fontFamily: 'Inter',
+        fontSize: 12,
+        lineHeight: 1.5,
+        margins: 20,
+        borderRadius: 4,
+        sectionSpacing: 16,
+        showIcons: true,
+        pageSize: 'A4'
+      }
+    });
+    res.status(201).json({ success: true, resume });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.generateAIResume = async (req, res) => {
   try {
     const AIContextBuilder = require('../services/AIContextBuilder');
@@ -724,6 +722,19 @@ exports.generateAIResume = async (req, res) => {
     
     // Clear isPrimary on other resumes
     await Resume.updateMany({ user: req.user._id }, { isPrimary: false });
+
+    const githubRepos = fullContext.github?.repositories || [];
+    const projects = githubRepos.slice(0, 5).map(repo => ({
+      title: repo.name,
+      technologiesUsed: Object.keys(repo.languages || {}),
+      description: repo.description || `GitHub repository: ${repo.fullName}`
+    }));
+
+    const links = [];
+    if (fullContext.linkedin?.profileUrl) links.push(fullContext.linkedin.profileUrl);
+    if (fullContext.github?.username) links.push(`https://github.com/${fullContext.github.username}`);
+
+    const languages = fullContext.github?.languages?.map(l => l.name) || [];
 
     // Create new resume document in database
     const resume = await Resume.create({
@@ -739,7 +750,11 @@ exports.generateAIResume = async (req, res) => {
         skills: Array.isArray(synthesized.skills) ? synthesized.skills : [],
         experience: Array.isArray(synthesized.experience) ? synthesized.experience : [],
         education: Array.isArray(synthesized.education) ? synthesized.education : [],
-        certifications: Array.isArray(synthesized.certifications) ? synthesized.certifications : []
+        certifications: Array.isArray(synthesized.certifications) ? synthesized.certifications : [],
+        projects,
+        links,
+        languages,
+        achievements: []
       },
       score: 85,
       isPrimary: true
@@ -753,8 +768,25 @@ exports.generateAIResume = async (req, res) => {
 
 exports.updateResumeContent = async (req, res) => {
   try {
-    const resume = await Resume.findOne({ _id: req.params.resumeId, user: req.user._id });
-    if (!resume) return res.status(404).json({ success: false, message: 'Resume not found' });
+    let resume;
+    const isNew = !req.params.resumeId || req.params.resumeId === 'new' || req.params.resumeId === 'undefined' || req.params.resumeId === 'null' || req.params.resumeId === '';
+    
+    if (isNew) {
+      resume = new Resume({
+        user: req.user._id,
+        filename: 'Manual_Resume.pdf',
+        filepath: 'manual-builder',
+        parsed: {},
+        themeCustomization: {}
+      });
+    } else {
+      const query = { _id: req.params.resumeId };
+      if (req.user.role === 'candidate') {
+        query.user = req.user._id;
+      }
+      resume = await Resume.findOne(query);
+      if (!resume) return res.status(404).json({ success: false, message: 'Resume not found' });
+    }
 
     if (req.body.parsed) {
       const parsedData = req.body.parsed;
@@ -767,6 +799,10 @@ exports.updateResumeContent = async (req, res) => {
       if (parsedData.experience !== undefined) resume.parsed.experience = parsedData.experience;
       if (parsedData.education !== undefined) resume.parsed.education = parsedData.education;
       if (parsedData.certifications !== undefined) resume.parsed.certifications = parsedData.certifications;
+      if (parsedData.projects !== undefined) resume.parsed.projects = parsedData.projects;
+      if (parsedData.languages !== undefined) resume.parsed.languages = parsedData.languages;
+      if (parsedData.achievements !== undefined) resume.parsed.achievements = parsedData.achievements;
+      if (parsedData.links !== undefined) resume.parsed.links = parsedData.links;
     }
 
     if (req.body.themeCustomization) {

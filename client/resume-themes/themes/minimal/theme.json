@@ -1,0 +1,53 @@
+{
+  "id": "3",
+  "key": "minimal",
+  "name": "Minimal",
+  "category": "Minimal",
+  "description": "A professionally optimized Minimal layout matching modern recruitment standards.",
+  "atsScore": 92,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#2563EB",
+    "#0F172A",
+    "#475569"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 530,
+  "downloads": 1284,
+  "favoritesCount": 166,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Minimal",
+  "Category": "Minimal",
+  "Description": "A professionally optimized Minimal layout matching modern recruitment standards.",
+  "ATS Score": 92,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#0F172A",
+  "Secondary Color": "#475569",
+  "Accent Color": "#2563EB",
+  "Fonts": [
+    "Lora"
+  ],
+  "Layout": "single-column",
+  "Sidebar": "none",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}

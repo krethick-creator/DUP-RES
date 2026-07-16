@@ -1,0 +1,53 @@
+{
+  "id": "6",
+  "key": "developer",
+  "name": "Developer",
+  "category": "Developer",
+  "description": "A professionally optimized Developer layout matching modern recruitment standards.",
+  "atsScore": 95,
+  "bestFor": "Executive Business Roles",
+  "colors": [
+    "#10B981",
+    "#064E3B",
+    "#111827"
+  ],
+  "fontFamily": "Lora",
+  "popularity": 575,
+  "downloads": 1410,
+  "favoritesCount": 190,
+  "companyRecommendations": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Theme Name": "Developer",
+  "Category": "Developer",
+  "Description": "A professionally optimized Developer layout matching modern recruitment standards.",
+  "ATS Score": 95,
+  "Best For": "Executive Business Roles",
+  "Company Recommendation": [
+    "McKinsey",
+    "Goldman Sachs"
+  ],
+  "Primary Color": "#064E3B",
+  "Secondary Color": "#111827",
+  "Accent Color": "#10B981",
+  "Fonts": [
+    "Lora"
+  ],
+  "Layout": "two-column",
+  "Sidebar": "left",
+  "Header Style": "centered",
+  "Supported Sections": [
+    "summary",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "achievements",
+    "certificates",
+    "languages",
+    "research"
+  ],
+  "Author": "TalentAI Team",
+  "Version": "1.0.0"
+}
