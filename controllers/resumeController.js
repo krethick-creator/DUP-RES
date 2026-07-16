@@ -136,6 +136,41 @@ exports.uploadResume = async (req, res) => {
   }
 };
 
+exports.createManualResume = async (req, res) => {
+  try {
+    const Resume = require('../models/Resume');
+    // Clear isPrimary from older user resumes
+    await Resume.updateMany({ user: req.user._id }, { isPrimary: false });
+
+    const resume = await Resume.create({
+      user: req.user._id,
+      filename: req.body.filename || 'My_Resume.json',
+      filepath: 'manual',
+      parsed: {
+        name: req.user.name || 'Your Name',
+        email: req.user.email || 'yourname@example.com',
+        phone: '',
+        location: '',
+        summary: 'Experienced professional.',
+        skills: ['JavaScript'],
+        experience: [],
+        education: [],
+        projects: [],
+        certifications: [],
+        languages: [],
+        socialLinks: []
+      },
+      score: 80,
+      authenticityScore: 100,
+      isPrimary: true
+    });
+
+    res.status(201).json({ success: true, resume });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.getResumes = async (req, res) => {
   try {
     const resumes = await Resume.find({ user: req.user._id }).sort('-createdAt');

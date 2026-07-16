@@ -1,0 +1,52 @@
+const mongoose = require("mongoose");
+
+const leetCodeProfileSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+    },
+    username: { type: String, required: true, trim: true },
+    displayName: { type: String, trim: true },
+    profileUrl: { type: String, required: true, trim: true },
+    about: { type: String, trim: true },
+    countryName: { type: String, trim: true },
+    ranking: { type: Number, default: 0 },
+    totalSolved: { type: Number, default: 0 },
+    easySolved: { type: Number, default: 0 },
+    mediumSolved: { type: Number, default: 0 },
+    hardSolved: { type: Number, default: 0 },
+    acceptanceRate: { type: Number, default: 0 },
+    currentStreak: { type: Number, default: 0 },
+    joinedDate: { type: String },
+    contestRating: { type: Number, default: 0 },
+    badges: [{ type: mongoose.Schema.Types.Mixed }],
+    skills: [{ type: String }],
+    contestHistory: [{ type: mongoose.Schema.Types.Mixed }],
+    avatar: { type: String, default: "" },
+    reputation: { type: Number, default: 0 },
+    successPercentage: { type: Number, default: 0 },
+    bestRating: { type: Number, default: 0 },
+    globalRank: { type: Number, default: 0 },
+    totalContests: { type: Number, default: 0 },
+    totalSubmissions: { type: Number, default: 0 },
+    acceptedSubmissions: { type: Number, default: 0 },
+    wrongAnswer: { type: Number, default: 0 },
+    runtimeError: { type: Number, default: 0 },
+    TLE: { type: Number, default: 0 },
+    memoryLimit: { type: Number, default: 0 },
+    recentSubmissions: [{ type: mongoose.Schema.Types.Mixed }],
+    recentProblems: [{ type: mongoose.Schema.Types.Mixed }],
+    programmingLanguages: [{ type: mongoose.Schema.Types.Mixed }],
+    knownTopics: [{ type: mongoose.Schema.Types.Mixed }],
+    submissionCalendar: { type: mongoose.Schema.Types.Mixed, default: {} },
+    lastSynced: { type: Date },
+    aiAnalysis: { type: mongoose.Schema.Types.Mixed, default: {} },
+  },
+  { timestamps: true },
+);
+
+
+module.exports = mongoose.model("LeetCodeProfile", leetCodeProfileSchema);

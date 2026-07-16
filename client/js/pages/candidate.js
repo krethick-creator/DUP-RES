@@ -38,6 +38,11 @@ const CandidateDashboard = {
       ]
     },
     {
+      title: 'Coding Profiles', items: [
+        { id: 'coding-profiles', icon: '💻', label: 'LeetCode & HackerRank' }
+      ]
+    },
+    {
       title: 'More', items: [
         { id: 'github', icon: '🐙', label: 'GitHub' },
         { id: 'jobs', icon: '💼', label: 'Job Recommendations' },
@@ -94,6 +99,7 @@ const CandidateDashboard = {
       benchmarks: () => this.renderBenchmarks(),
       growth: () => this.renderGrowth(),
       github: () => this.renderGitHub(),
+      'coding-profiles': () => this.renderCodingProfiles(),
       jobs: () => this.renderJobs(),
       notifications: () => this.renderNotifications(),
       settings: () => this.renderSettings()
@@ -1049,6 +1055,7 @@ const CandidateDashboard = {
     if (this.section === 'benchmarks') this.loadBenchmarks();
     if (this.section === 'growth') this.loadGrowth();
     if (this.section === 'github') this.loadGitHub();
+    if (this.section === 'coding-profiles') { this.loadCodingProfiles(); this.bindCodingProfileEvents(); }
     if (this.section === 'settings') {
       const settingsToggle = document.getElementById('settings-dark-toggle');
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -3988,5 +3995,1799 @@ const CandidateDashboard = {
       </div>
     `;
   }
+
+,
+
+  renderCodingProfiles() {
+    return this.renderProfessionalCodingProfiles();
+  },
+  renderLeetCodeKnownTopics(knownTopics) {
+    if (!knownTopics?.length) {
+      return '<p class="text-sm text-secondary">No skills available.</p>';
+    }
+    const normalized = knownTopics
+      .map((item) => ({
+        topic: item.topic || item.name || "",
+        solved: Number(item.solved ?? item.problemsSolved ?? 0),
+      }))
+      .filter((item) => item.topic);
+    if (!normalized.length) {
+      return '<p class="text-sm text-secondary">No skills available.</p>';
+    }
+    const maxLabelLength = Math.max(
+      ...normalized.map((item) => item.topic.length),
+    );
+    return `<div class="flex flex-col gap-1">${normalized
+      .map(({ topic, solved }) => {
+        const dots = ".".repeat(Math.max(1, maxLabelLength + 6 - topic.length));
+        return `<div class="text-sm flex gap-2"><span>${topic}</span><span class="text-muted">${dots}</span><span>${solved} solved</span></div>`;
+      })
+      .join("")}</div>`;
+  },
+
+  extractCodingUsername(value, platform) {
+    const input = (value || "").trim();
+    if (!input) return "";
+    const patterns = {
+      leetcode: /leetcode\.com\/(?:(?:profile|u)\/)?([^\/\?\#]+)/i,
+      hackerrank: /hackerrank\.com\/(?:profile\/)?([^\/\?\#]+)/i,
+    };
+    const match = input.match(patterns[platform]);
+    return match ? match[1] : input;
+  },
+
+  renderCodingMetric(label, value) {
+    const display =
+      value === undefined || value === null || value === "" ? "â€”" : value;
+    return `<div><div class="text-xs text-muted">${label}</div><strong>${display}</strong></div>`;
+  },
+
+  renderProfessionalCodingProfiles() {
+    return `
+      <div class="card mt-6" id="professional-coding-profiles">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h3 class="mb-1">Professional Coding Profiles</h3>
+            <p class="text-sm text-secondary">Connect and sync your verified coding presence.</p>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-secondary btn-sm" id="sync-all-coding-btn">Sync All</button>
+            <button class="btn btn-primary btn-sm" id="generate-coding-ai-top-btn">Generate AI Analysis</button>
+          </div>
+        </div>
+        <div class="grid grid-3 gap-4">
+          ${this.renderGitHubCodingCard()}
+          ${this.renderLeetCodeCodingCard()}
+          ${this.renderHackerRankCodingCard()}
+        </div>
+      </div>
+
+      <div class="card mt-6" id="hackerrank-certifications">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h3 class="mb-1">HackerRank Certifications</h3>
+            <p class="text-sm text-secondary">Verify with an official HackerRank certificate URL, iframe URL, or upload a PDF as a fallback.</p>
+          </div>
+        </div>
+        <div class="grid grid-2 gap-4 mb-4">
+          <div class="card" style="padding:16px">
+            <h4 class="mb-3">Official HackerRank Verification</h4>
+            <div class="form-group">
+              <label class="form-label">Verification URL</label>
+              <input type="url" id="hackerrank-verification-url" class="form-input" placeholder="https://www.hackerrank.com/certificates/...">
+            </div>
+            <button class="btn btn-primary btn-sm" id="verify-hackerrank-url-btn">Verify</button>
+          </div>
+          <div class="card" style="padding:16px">
+            <h4 class="mb-3">Iframe Verification</h4>
+            <div class="form-group">
+              <label class="form-label">Iframe URL</label>
+              <input type="url" id="hackerrank-iframe-url" class="form-input" placeholder="https://www.hackerrank.com/certificates/iframe/...">
+            </div>
+            <button class="btn btn-secondary btn-sm" id="verify-hackerrank-iframe-btn">Verify</button>
+          </div>
+        </div>
+        <div class="card" style="padding:16px">
+          <h4 class="mb-3">Upload PDF (Optional)</h4>
+          <div class="grid grid-2 gap-4">
+            <input type="file" id="hackerrank-certificate-file" accept=".pdf,.png,.jpg,.jpeg" class="form-input">
+            <button class="btn btn-secondary" id="upload-hackerrank-certificate-btn">Upload Certificate</button>
+          </div>
+        </div>
+        <div id="hackerrank-certificates-list"><div class="spinner"></div></div>
+      </div>
+
+      <div class="mt-6" id="coding-summary-card"></div>`;
+  },
+
+  renderGitHubCodingCard() {
+    const connected = !!this.user?.githubConnected;
+    return `
+      <div class="card" style="height:100%">
+        <div class="flex justify-between items-center mb-4">
+          <div class="flex items-center gap-3">
+            ${UI.getIcon("Ã°Å¸Ââ„¢", "candidate", "28px")}
+            <div>
+              <strong>GitHub</strong>
+              <div id="github-sync-status" class="text-xs text-muted">Loading profile...</div>
+            </div>
+          </div>
+          ${UI.badge(connected ? "Connected" : "Not Connected", connected ? "success" : "warning")}
+        </div>
+        <div id="github-profile-card-body">
+          <div class="spinner"></div>
+        </div>
+        <div class="flex gap-2 mt-4" style="flex-wrap:wrap">
+          ${
+            connected
+              ? `
+                <button class="btn btn-secondary btn-sm" id="sync-github-profile-btn">Sync</button>
+                <button class="btn btn-secondary btn-sm" id="disconnect-github-profile-btn">Disconnect</button>
+                <button class="btn btn-primary btn-sm" id="generate-github-ai-btn">Generate AI Analysis</button>
+              `
+              : `<button class="btn btn-primary btn-sm" id="connect-github-profile-btn">Connect GitHub</button>`
+          }
+        </div>
+      </div>`;
+  },
+
+  renderLeetCodeCodingCard() {
+    return `
+      <div class="card" style="height:100%">
+        <div class="flex justify-between items-center mb-4">
+          <div class="flex items-center gap-3">
+            ${UI.getIcon("Ã°Å¸Â§Â ", "candidate", "28px")}
+            <div>
+              <strong>LeetCode</strong>
+              <div id="leetcode-sync-status" class="text-xs text-muted">Loading profile...</div>
+            </div>
+          </div>
+          <span id="leetcode-status-badge">${UI.badge("Loading", "warning")}</span>
+        </div>
+        <div class="grid grid-2 gap-3 mb-4" id="leetcode-connect-form">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Username</label>
+            <input type="text" id="leetcode-username" class="form-input" placeholder="leetcode_user">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Profile URL</label>
+            <input type="text" id="leetcode-url" class="form-input" placeholder="https://leetcode.com/user/">
+          </div>
+        </div>
+        <div class="text-xs text-muted mb-4" id="leetcode-connect-help">Enter a username or profile URL. Profile URLs are converted to usernames automatically.</div>
+        <div id="leetcode-profile-card-body"><div class="spinner"></div></div>
+        <div class="flex gap-2 mt-4" style="flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="connect-leetcode-btn">Connect</button>
+          <button class="btn btn-secondary btn-sm" id="sync-leetcode-btn" style="display:none">Sync</button>
+          <button class="btn btn-primary btn-sm" id="generate-leetcode-ai-btn" style="display:none">Generate AI Analysis</button>
+          <button class="btn btn-secondary btn-sm" id="disconnect-leetcode-btn" style="display:none">Disconnect</button>
+        </div>
+      </div>`;
+  },
+
+  renderHackerRankCodingCard() {
+    return `
+      <div class="card" style="height:100%">
+        <div class="flex justify-between items-center mb-4">
+          <div class="flex items-center gap-3">
+            ${UI.getIcon("Ã°Å¸ÂÂ", "candidate", "28px")}
+            <div>
+              <strong>HackerRank</strong>
+              <div id="hackerrank-sync-status" class="text-xs text-muted">Loading profile...</div>
+            </div>
+          </div>
+          <span id="hackerrank-status-badge">${UI.badge("Loading", "warning")}</span>
+        </div>
+        <div class="grid grid-2 gap-3 mb-4" id="hackerrank-connect-form">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Username</label>
+            <input type="text" id="hackerrank-username" class="form-input" placeholder="hackerrank_user">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Profile URL</label>
+            <input type="text" id="hackerrank-url" class="form-input" placeholder="https://www.hackerrank.com/user">
+          </div>
+        </div>
+        <div class="text-xs text-muted mb-4" id="hackerrank-connect-help">HackerRank profile verification uses the existing backend profile check.</div>
+        <div id="hackerrank-profile-card-body"><div class="spinner"></div></div>
+        <div class="flex gap-2 mt-4" style="flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" id="connect-hackerrank-btn">Connect</button>
+          <button class="btn btn-secondary btn-sm" id="sync-hackerrank-btn" style="display:none">Sync</button>
+          <button class="btn btn-primary btn-sm" id="generate-hackerrank-ai-btn" style="display:none">Generate AI Analysis</button>
+          <button class="btn btn-secondary btn-sm" id="disconnect-hackerrank-btn" style="display:none">Disconnect</button>
+        </div>
+      </div>`;
+  },
+
+  renderProfile() {
+    const ghConnected = this.user?.githubConnected;
+    const liConnected = this.user?.linkedinConnected;
+    const googleConnected = this.user?.googleConnected;
+    const leetCodeConnected = this.user?.leetCodeConnected;
+    const hackerRankConnected = this.user?.hackerRankConnected;
+    const leetCodeUsername = this.user?.leetCodeUsername || "";
+    const hackerRankUsername = this.user?.hackerRankUsername || "";
+
+    return `
+      <div class="page-header"><h2>Profile</h2><p class="text-secondary">Manage your personal information</p></div>
+      <div class="grid grid-2 gap-6">
+        <div class="card">
+          <form id="profile-form">
+            <div class="grid grid-2 gap-4">
+              <div class="form-group"><label class="form-label">Name</label><input class="form-input" name="name" value="${this.user?.name || ""}"></div>
+              <div class="form-group"><label class="form-label">Email</label><input class="form-input" value="${this.user?.email || ""}" disabled></div>
+              <div class="form-group"><label class="form-label">Phone</label><input class="form-input" name="phone" placeholder="+1-555-0100" value="${this.user?.phone || ""}"></div>
+              <div class="form-group"><label class="form-label">Location</label><input class="form-input" name="location" placeholder="City, Country" value="${this.user?.location || ""}"></div>
+            </div>
+            <div class="form-group"><label class="form-label">Bio</label><textarea class="form-textarea" name="bio" placeholder="Tell us about yourself">${this.user?.bio || ""}</textarea></div>
+            <div class="form-group"><label class="form-label">Skills (comma separated)</label><input class="form-input" name="skills" placeholder="JavaScript, React, Node.js" value="${this.user?.skills?.join(", ") || ""}"></div>
+            <button type="submit" class="btn btn-primary">Save Profile</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h3 class="mb-4">Connected Accounts</h3>
+          <div class="flex flex-col gap-4">
+            
+            <!-- GitHub Account -->
+            <div class="flex justify-between items-center p-3 rounded" style="background:var(--bg-secondary); border: 1px solid var(--border-color)">
+              <div class="flex items-center gap-3">
+                ${UI.getIcon("ðŸ™", "candidate", "28px")}
+                <div>
+                  <strong>GitHub</strong>
+                  <div class="text-sm text-secondary">${ghConnected ? "Connected" : "Not Connected"}</div>
+                </div>
+              </div>
+              <div>
+                ${
+                  ghConnected
+                    ? `
+                  <button class="btn btn-secondary btn-sm" id="disconnect-github-btn">Disconnect</button>
+                `
+                    : `
+                  <button class="btn btn-primary btn-sm" id="connect-github-btn">Connect</button>
+                `
+                }
+              </div>
+            </div>
+
+            <!-- LinkedIn Account -->
+            <div class="flex justify-between items-center p-3 rounded" style="background:var(--bg-secondary); border: 1px solid var(--border-color)">
+              <div class="flex items-center gap-3">
+                ${UI.getIcon("ðŸ’¼", "candidate", "28px")}
+                <div>
+                  <strong>LinkedIn</strong>
+                  <div class="text-sm text-secondary">${liConnected ? "Connected" : "Not Connected"}</div>
+                </div>
+              </div>
+              <div>
+                ${
+                  liConnected
+                    ? `
+                  <button class="btn btn-secondary btn-sm" id="disconnect-linkedin-btn">Disconnect</button>
+                `
+                    : `
+                  <button class="btn btn-primary btn-sm" id="connect-linkedin-btn">Connect LinkedIn</button>
+                `
+                }
+              </div>
+            </div>
+
+            ${this.renderProfessionalCodingProfiles()}
+
+            <!-- Candidate Email Status -->
+            <div class="flex justify-between items-center p-3 rounded" style="background:var(--bg-secondary); border: 1px solid var(--border-color)">
+              <div class="flex items-center gap-3">
+                ${UI.getIcon("ðŸ“§", "candidate", "28px")}
+                <div>
+                  <strong>Email Address</strong>
+                  <div class="text-sm text-secondary">${this.user?.email || ""}</div>
+                  <div class="text-xs text-muted">${this.user?.emailVerified || this.user?.isVerified ? "âœ… Email Verified" : "âŒ Email Not Verified"}</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>`;
+  },
+
+  renderResume() {
+    return `
+      <div class="page-header"><h2>Resume</h2><p class="text-secondary">Upload and manage your resumes</p></div>
+      <div class="grid grid-2 gap-6">
+        <div class="card">${UI.uploadZone("resume-upload")}</div>
+        <div class="card" id="resume-list"><h3 class="mb-4">Your Resumes</h3><div class="spinner"></div></div>
+      </div>`;
+  },
+
+  async renderApplications() {
+    let apps = [];
+    try {
+      const data = await API.getApplications();
+      apps = data.applications || [];
+    } catch (_) {}
+
+    return `
+      <div class="page-header"><h2>Applications</h2><p class="text-secondary">Track your job applications</p></div>
+      <div class="card">
+        ${
+          apps.length
+            ? UI.table(
+                ["Job", "Status", "AI Score", "Skill Match", "Date"],
+                apps.map((a) => [
+                  a.job?.title || "N/A",
+                  UI.badge(
+                    a.status,
+                    a.status === "shortlisted" ? "success" : "primary",
+                  ),
+                  `${a.aiScore || 0}%`,
+                  `${a.skillMatch || 0}%`,
+                  new Date(a.createdAt).toLocaleDateString(),
+                ]),
+              )
+            : UI.emptyState(
+                "ðŸ“‹",
+                "No applications yet",
+                "Browse jobs and apply to get started",
+                '<a href="#/candidate/jobs" class="btn btn-primary">Find Jobs</a>',
+              )
+        }
+      </div>`;
+  },
+
+  renderResumeAI() {
+    return `
+      <div class="page-header"><h2>Resume AI</h2><p class="text-secondary">AI-powered resume tools</p></div>
+      <div class="grid grid-3 gap-4 mb-6">
+        <button class="card hover-lift text-center" data-ai-action="simulate"><div style="display:flex; justify-content:center; align-items:center; height:32px; margin-bottom:8px;">${UI.getIcon("ðŸŽ¯", "candidate", "28px")}</div><h4 class="mt-2">Resume Simulation</h4><p class="text-sm text-muted">Test against hiring scenarios</p></button>
+        <button class="card hover-lift text-center" data-ai-action="dynamic"><div style="display:flex; justify-content:center; align-items:center; height:32px; margin-bottom:8px;">${UI.getIcon("âœ¨", "candidate", "28px")}</div><h4 class="mt-2">Dynamic Resume</h4><p class="text-sm text-muted">Tailor for specific jobs</p></button>
+        <button class="card hover-lift text-center" data-ai-action="improve"><div style="display:flex; justify-content:center; align-items:center; height:32px; margin-bottom:8px;">${UI.getIcon("ðŸ“ˆ", "candidate", "28px")}</div><h4 class="mt-2">Improvement Report</h4><p class="text-sm text-muted">Get actionable feedback</p></button>
+      </div>
+      <div class="card" id="resume-ai-result"><p class="text-secondary">Select an action above to run AI analysis</p></div>`;
+  },
+
+  renderAssessments() {
+    return `
+      <div class="page-header flex justify-between items-center">
+        <div><h2>Coding Assessment</h2><p class="text-secondary">Test your technical skills</p></div>
+        <button class="btn btn-primary" id="start-assessment">Start Assessment</button>
+      </div>
+      <div class="grid grid-2 gap-6">
+        <div class="card" id="assessment-area">
+          <h3 class="mb-4">Code Editor</h3>
+          <textarea class="form-textarea" id="code-input" style="min-height:300px;font-family:monospace" placeholder="// Write your code here..."></textarea>
+          <button class="btn btn-primary mt-4" id="submit-code">Submit for AI Review</button>
+        </div>
+        <div class="card" id="code-review-result">
+          <h3 class="mb-4">AI Code Review</h3>
+          <p class="text-secondary">Submit code to get AI-powered review and suggestions</p>
+        </div>
+      </div>`;
+  },
+
+  renderInterview() {
+    return `
+      <div class="page-header"><h2>Interview Preparation</h2><p class="text-secondary">AI-generated interview questions</p></div>
+      <div class="card mb-4">
+        <div class="flex gap-4">
+          <input class="form-input" id="interview-role" placeholder="Target role (e.g. Senior Developer)">
+          <button class="btn btn-primary" id="gen-questions">Generate Questions</button>
+        </div>
+      </div>
+      <div class="card" id="interview-questions"><p class="text-secondary">Click generate to create personalized interview questions</p></div>`;
+  },
+
+  renderAIAssistant() {
+    return `
+      <div class="page-header"><h2>AI Assistant</h2><p class="text-secondary">Your personal career AI helper</p></div>
+      ${UI.aiChat("candidate-chat")}`;
+  },
+
+  renderRoadmap() {
+    return `
+      <div class="page-header flex justify-between items-center">
+        <div><h2>Career Roadmap</h2><p class="text-secondary">Visual interactive career path</p></div>
+        <span class="badge badge-primary" id="roadmap-progress">Loading...</span>
+      </div>
+      <div class="roadmap-container" id="roadmap-viz"></div>
+      <div class="grid grid-3 gap-4 mt-6">
+        <div class="card"><h4>Skill Gaps</h4><div id="skill-gaps" class="mt-4"><div class="spinner"></div></div></div>
+        <div class="card"><h4>Goals</h4><div id="roadmap-goals" class="mt-4"></div></div>
+        <div class="card"><h4>Roadmap Analysis</h4><div id="roadmap-analysis" class="mt-4"><div class="spinner"></div></div></div>
+      </div>`;
+  },
+
+  renderLearning() {
+    return `
+      <div class="page-header"><h2>Learning Progress</h2><p class="text-secondary">Continuous learning score and roadmap</p></div>
+      <div class="grid grid-4 gap-4 mb-6" id="learning-stats"></div>
+      <div class="card chart-container"><h3 class="mb-4">Learning Roadmap</h3><div class="chart-wrapper"><canvas id="learning-roadmap-chart"></canvas></div></div>
+      <div class="card mt-6" id="learning-modules"></div>`;
+  },
+
+  async renderLeaderboard() {
+    let data = { leaderboard: [] };
+    try {
+      data = await API.getLeaderboard();
+    } catch (_) {}
+
+    return `
+      <div class="page-header"><h2>Career Leaderboard</h2><p class="text-secondary">See how you rank among peers</p></div>
+      <div class="card">
+        ${(data.leaderboard || [])
+          .map(
+            (item) => `
+          <div class="leaderboard-item">
+            <span class="leaderboard-rank ${item.rank <= 3 ? "top" : ""}">#${item.rank}</span>
+            ${UI.avatar(item.name)}
+            <div><strong>${item.name}</strong></div>
+            <span class="leaderboard-score">${item.score}</span>
+            <span class="badge badge-success">${item.growth}</span>
+          </div>
+        `,
+          )
+          .join("")}
+      </div>`;
+  },
+
+  async renderBenchmarks() {
+    return `
+      <div class="page-header"><h2>Benchmark Comparison</h2><p class="text-secondary">Compare yourself to industry averages</p></div>
+      <div class="card chart-container"><div class="chart-wrapper"><canvas id="benchmark-chart"></canvas></div></div>`;
+  },
+
+  async renderGrowth() {
+    return `
+      <div class="page-header"><h2>Career Growth Prediction</h2><p class="text-secondary">AI-powered career trajectory forecast</p></div>
+      <div id="growth-predictions" class="grid grid-3 gap-4"></div>
+      <div class="card chart-container mt-6"><h3 class="mb-4">Growth Timeline</h3><div class="chart-wrapper"><canvas id="growth-chart"></canvas></div></div>`;
+  },
+
+  renderGitHub() {
+    return `
+      <div class="page-header flex justify-between items-center">
+        <div><h2>GitHub Dashboard</h2><p class="text-secondary">Repository analysis and portfolio score</p></div>
+        <button class="btn btn-primary" id="connect-github">Connect GitHub</button>
+      </div>
+      <div class="grid grid-4 gap-4 mb-6" id="github-stats"></div>
+      <div class="grid grid-2 gap-6 mb-6">
+        <div class="card chart-container"><h3 class="mb-4">Languages</h3><div class="chart-wrapper"><canvas id="github-lang-chart"></canvas></div></div>
+        <div class="card" id="github-repos"><h3 class="mb-4">Top Repositories</h3><div class="spinner"></div></div>
+      </div>
+      <div id="github-ai-insights"></div>`;
+  },
+
+  async renderJobs() {
+    let recs = { recommendations: [] };
+    try {
+      recs = await API.getJobRecommendations();
+    } catch (_) {}
+
+    return `
+      <div class="page-header"><h2>Job Recommendations</h2><p class="text-secondary">AI-matched opportunities for you</p></div>
+      <div class="grid grid-2 gap-4">
+        ${
+          (recs.recommendations || [])
+            .map(
+              (j) => `
+          <div class="glass-card p-6 hover-lift">
+            <div class="flex justify-between items-center mb-2">
+              <h3>${j.title}</h3>
+              <span class="badge badge-primary">${j.match}% match</span>
+            </div>
+            <p class="text-secondary">${j.company}</p>
+            <button class="btn btn-primary btn-sm mt-4">View & Apply</button>
+          </div>
+        `,
+            )
+            .join("") ||
+          UI.emptyState(
+            "ðŸ’¼",
+            "No matches found",
+            "Update your skills to get better recommendations",
+          )
+        }
+      </div>`;
+  },
+
+  async renderNotifications() {
+    let data = { notifications: [] };
+    try {
+      data = await API.getNotifications();
+    } catch (_) {}
+
+    return `
+      <div class="page-header"><h2>Notifications</h2></div>
+      <div class="card">
+        ${
+          (data.notifications || [])
+            .map(
+              (n) => `
+          <div class="leaderboard-item ${n.isRead ? "" : ""}" style="cursor:pointer" data-notif-id="${n._id}">
+            <div>
+              <strong>${n.title}</strong>
+              <p class="text-sm text-secondary">${n.message}</p>
+              <span class="text-xs text-muted">${new Date(n.createdAt).toLocaleString()}</span>
+            </div>
+            ${!n.isRead ? '<span class="badge badge-primary">New</span>' : ""}
+          </div>
+        `,
+            )
+            .join("") ||
+          UI.emptyState("ðŸ””", "No notifications", "You're all caught up!")
+        }
+      </div>`;
+  },
+
+  renderSettings() {
+    return `
+      <div class="page-header"><h2>Settings</h2><p class="text-secondary">Account preferences</p></div>
+      <div class="card">
+        <h3 class="mb-4">Preferences</h3>
+        <div class="flex items-center justify-between mb-4">
+          <div><strong>Dark Mode</strong><p class="text-sm text-muted">Toggle dark theme</p></div>
+          <div class="toggle-switch" id="settings-dark-toggle"></div>
+        </div>
+        <div class="flex items-center justify-between mb-4">
+          <div><strong>Email Notifications</strong><p class="text-sm text-muted">Receive email updates</p></div>
+          <div class="toggle-switch active"></div>
+        </div>
+        <div class="flex items-center justify-between">
+          <div><strong>In-App Notifications</strong><p class="text-sm text-muted">Real-time alerts</p></div>
+          <div class="toggle-switch active"></div>
+        </div>
+      </div>`;
+  },
+
+  bind() {
+    UI.bindDashboardEvents((section) => {
+      window.location.hash = `#/candidate/${section}`;
+    });
+
+    // Profile form
+    document
+      .getElementById("profile-form")
+      ?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const form = new FormData(e.target);
+        try {
+          const data = await API.updateProfile({
+            name: form.get("name"),
+            phone: form.get("phone"),
+            location: form.get("location"),
+            bio: form.get("bio"),
+            skills: form
+              .get("skills")
+              ?.split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
+          });
+          API.setUser(data.user);
+          UI.toast("Profile updated", "success");
+        } catch (err) {
+          UI.toast(err.message, "error");
+        }
+      });
+
+    // Resume upload
+    UI.bindUploadZone("resume-upload", async (file) => {
+      const fd = new FormData();
+      fd.append("resume", file);
+      try {
+        await API.uploadResume(fd);
+        UI.toast("Resume uploaded and parsed!", "success");
+        this.loadResumes();
+      } catch (err) {
+        UI.toast(err.message, "error");
+      }
+    });
+
+    if (this.section === "resume") this.loadResumes();
+    if (this.section === "overview") this.loadOverviewCharts();
+    if (this.section === "roadmap") this.loadRoadmap();
+    if (this.section === "learning") this.loadLearning();
+    if (this.section === "benchmarks") this.loadBenchmarks();
+    if (this.section === "growth") this.loadGrowth();
+    if (this.section === "github") this.loadGitHub();
+    if (this.section === "profile") {
+      this.loadCodingProfiles();
+      this.loadCodingSummary();
+    }
+
+    // AI Assistant
+    UI.bindAIChat("candidate-chat", async (text) => {
+      const data = await API.candidateAI("interview-prep", { query: text });
+      return data.response;
+    });
+
+    // Resume AI actions
+    document.querySelectorAll("[data-ai-action]").forEach((btn) => {
+      btn.addEventListener("click", () =>
+        this.runResumeAI(btn.dataset.aiAction),
+      );
+    });
+
+    // Assessment
+    document
+      .getElementById("start-assessment")
+      ?.addEventListener("click", async () => {
+        try {
+          const data = await API.createAssessment({
+            language: "JavaScript",
+            difficulty: "medium",
+          });
+          UI.toast(`Assessment started: ${data.assessment.title}`, "success");
+          window._currentAssessment = data.assessment._id;
+        } catch (err) {
+          UI.toast(err.message, "error");
+        }
+      });
+
+    document
+      .getElementById("submit-code")
+      ?.addEventListener("click", async () => {
+        const code = document.getElementById("code-input")?.value;
+        if (!code) return UI.toast("Write some code first", "warning");
+        try {
+          const id = window._currentAssessment || "new";
+          if (id === "new") {
+            const a = await API.createAssessment({
+              language: "JavaScript",
+              type: "code-review",
+            });
+            window._currentAssessment = a.assessment._id;
+          }
+          const data = await API.submitAssessment(window._currentAssessment, {
+            code,
+          });
+          const review = data.assessment.feedback;
+          document.getElementById("code-review-result").innerHTML = `
+          <h3 class="mb-4">AI Code Review â€” Score: ${data.assessment.score}/100</h3>
+          ${(review?.suggestions || []).map((s) => `<p>â€¢ ${s}</p>`).join("")}
+          ${(review?.issues || []).map((i) => `<p class="text-sm text-muted">Line ${i.line}: ${i.message}</p>`).join("")}`;
+          UI.toast("Code reviewed!", "success");
+        } catch (err) {
+          UI.toast(err.message, "error");
+        }
+      });
+
+    // Interview questions
+    document
+      .getElementById("gen-questions")
+      ?.addEventListener("click", async () => {
+        const role =
+          document.getElementById("interview-role")?.value ||
+          "Software Engineer";
+        try {
+          const data = await API.generateInterviewQuestions({
+            role,
+            count: 10,
+          });
+          document.getElementById("interview-questions").innerHTML = (
+            data.questions || []
+          )
+            .map(
+              (q) => `
+          <div class="card mb-2 p-4" style="padding:16px">
+            <div class="flex justify-between"><strong>${q.question}</strong>${UI.badge(q.type)}</div>
+            <span class="text-xs text-muted">${q.difficulty}</span>
+          </div>
+        `,
+            )
+            .join("");
+        } catch (err) {
+          UI.toast(err.message, "error");
+        }
+      });
+
+    // GitHub connect
+    document.getElementById("connect-github")?.addEventListener("click", () => {
+      window.location.href = `/api/auth/github?token=${API.token}`;
+    });
+
+    // Profile Connected Accounts bindings
+    document
+      .getElementById("connect-github-btn")
+      ?.addEventListener("click", () => {
+        window.location.href = `/api/auth/github?token=${API.token}`;
+      });
+
+    document
+      .getElementById("disconnect-github-btn")
+      ?.addEventListener("click", async () => {
+        try {
+          await API.post("/auth/github/disconnect");
+          UI.toast("GitHub account disconnected", "success");
+          const data = await API.getMe();
+          if (data && data.user) API.setUser(data.user);
+          await this.render("profile");
+        } catch (err) {
+          UI.toast(err.message, "error");
+        }
+      });
+
+    this.bindCodingProfileEvents();
+
+    document
+      .getElementById("connect-linkedin-btn")
+      ?.addEventListener("click", async () => {
+        try {
+          const res = await fetch("/api/auth/linkedin");
+          const text = await res.text();
+          if (text.includes("not configured")) {
+            UI.toast("LinkedIn OAuth is not configured.", "warning");
+          } else {
+            window.location.href = `/api/auth/linkedin?token=${API.token}`;
+          }
+        } catch (err) {
+          UI.toast("LinkedIn OAuth is not configured.", "warning");
+        }
+      });
+
+    document
+      .getElementById("disconnect-linkedin-btn")
+      ?.addEventListener("click", async () => {
+        try {
+          await API.post("/auth/linkedin/disconnect");
+          UI.toast("LinkedIn account disconnected", "success");
+          const data = await API.getMe();
+          if (data && data.user) API.setUser(data.user);
+          await this.render("profile");
+        } catch (err) {
+          UI.toast(err.message, "error");
+        }
+      });
+
+    document
+      .getElementById("connect-gmail-btn")
+      ?.addEventListener("click", () => {
+        window.location.href = `/api/auth/google?token=${API.token}`;
+      });
+
+    document
+      .getElementById("disconnect-gmail-btn")
+      ?.addEventListener("click", async () => {
+        try {
+          await API.post("/auth/google/disconnect");
+          UI.toast("Gmail account disconnected", "success");
+          const data = await API.getMe();
+          if (data && data.user) API.setUser(data.user);
+          await this.render("profile");
+        } catch (err) {
+          UI.toast(err.message, "error");
+        }
+      });
+  },
+
+  getCodingInput(platform) {
+    const username = document
+      .getElementById(`${platform}-username`)
+      ?.value.trim();
+    const profileUrl = document.getElementById(`${platform}-url`)?.value.trim();
+    const value = username || profileUrl;
+    const resolvedUsername = this.extractCodingUsername(value, platform);
+    if (profileUrl && !username) {
+      const usernameInput = document.getElementById(`${platform}-username`);
+      if (usernameInput) usernameInput.value = resolvedUsername;
+    }
+    const payload = {};
+    if (resolvedUsername) payload.username = resolvedUsername;
+    if (profileUrl) payload.profileUrl = profileUrl;
+    return payload;
+  },
+
+  async refreshProfileUser() {
+    const data = await API.getMe();
+    if (data && data.user) {
+      API.setUser(data.user);
+      this.user = data.user;
+    }
+  },
+
+  async bindProfileButton(buttonId, loadingText, action) {
+    const button = document.getElementById(buttonId);
+    if (!button) return;
+    button.addEventListener("click", async () => {
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = loadingText;
+      try {
+        await action();
+      } catch (err) {
+        UI.toast(err.message, "error");
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    });
+  },
+
+  setCodingProfileCardState(platform, connected) {
+    const form = document.getElementById(`${platform}-connect-form`);
+    const help = document.getElementById(`${platform}-connect-help`);
+    const sync = document.getElementById(`sync-${platform}-btn`);
+    const generate = document.getElementById(`generate-${platform}-ai-btn`);
+    const disconnect = document.getElementById(`disconnect-${platform}-btn`);
+
+    if (form) form.style.display = connected ? "none" : "";
+    if (help) help.style.display = connected ? "none" : "";
+    if (sync) sync.style.display = connected ? "" : "none";
+    if (generate) generate.style.display = connected ? "" : "none";
+    if (disconnect) disconnect.style.display = connected ? "" : "none";
+  },
+
+  confirmCodingProfileDisconnect() {
+    return new Promise((resolve) => {
+      const modal = UI.modal(
+        "Disconnect Profile",
+        `<p>Are you sure you want to disconnect this profile?</p>`,
+        `
+          <button class="btn btn-secondary" id="cancel-coding-disconnect-btn">Cancel</button>
+          <button class="btn btn-primary" id="confirm-coding-disconnect-btn">Disconnect</button>
+        `,
+      );
+      const close = (confirmed) => {
+        modal.remove();
+        resolve(confirmed);
+      };
+      modal.querySelector(".modal-close").onclick = () => close(false);
+      modal.onclick = (event) => {
+        if (event.target === modal) close(false);
+      };
+      modal.querySelector("#cancel-coding-disconnect-btn").onclick = () =>
+        close(false);
+      modal.querySelector("#confirm-coding-disconnect-btn").onclick = () =>
+        close(true);
+    });
+  },
+
+  openHackerRankCertificateDetails(certificate) {
+    const verificationUrl =
+      certificate.verificationUrl ||
+      (typeof certificate.filePath === "string" &&
+      certificate.filePath.startsWith("http")
+        ? certificate.filePath
+        : "");
+    const aiAnalysisText = certificate.aiAnalysis
+      ? JSON.stringify(certificate.aiAnalysis, null, 2)
+      : "No AI analysis available.";
+    const content = `
+      <div class="grid grid-2 gap-3 text-sm">
+        ${this.renderCodingMetric("Verified", certificate.verified ? "Yes" : "No")}
+        ${this.renderCodingMetric("Verification Method", certificate.verificationMethod || "â€”")}
+        ${this.renderCodingMetric("Verification Source", certificate.verificationSource || "â€”")}
+        ${this.renderCodingMetric("Certificate Name", certificate.certificateName || certificate.name || "â€”")}
+        ${this.renderCodingMetric("Candidate Name", certificate.candidateName || "â€”")}
+        ${this.renderCodingMetric("Skill", certificate.skill || "â€”")}
+        ${this.renderCodingMetric("Difficulty", certificate.difficulty || "â€”")}
+        ${this.renderCodingMetric("Issue Date", certificate.issueDate ? new Date(certificate.issueDate).toLocaleDateString() : "â€”")}
+        ${this.renderCodingMetric("Certificate ID", certificate.certificateId || "â€”")}
+        ${this.renderCodingMetric("Verification URL", verificationUrl || "â€”")}
+      </div>
+      <div class="mt-4">
+        <div class="text-xs text-muted mb-2">AI Analysis</div>
+        <pre class="text-sm" style="white-space:pre-wrap;background:var(--bg-secondary);padding:12px;border-radius:8px;border:1px solid var(--border-color)">${aiAnalysisText.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>
+      </div>
+    `;
+    const modal = UI.modal(
+      certificate.certificateName ||
+        certificate.name ||
+        "HackerRank Certificate",
+      content,
+      `<button class="btn btn-secondary" id="close-hackerrank-certificate-modal-btn">Close</button>`,
+    );
+    modal.querySelector("#close-hackerrank-certificate-modal-btn").onclick =
+      () => modal.remove();
+  },
+
+  bindCodingProfileEvents() {
+    const connectGitHub = () => {
+      window.location.href = `/api/auth/github?token=${API.token}`;
+    };
+
+    document
+      .getElementById("connect-github-profile-btn")
+      ?.addEventListener("click", connectGitHub);
+
+    this.bindProfileButton(
+      "disconnect-github-profile-btn",
+      "Disconnecting...",
+      async () => {
+        await API.post("/auth/github/disconnect");
+        UI.toast("GitHub account disconnected", "success");
+        await this.refreshProfileUser();
+        await Router.navigate();
+      },
+    );
+
+    this.bindProfileButton(
+      "sync-github-profile-btn",
+      "Syncing...",
+      async () => {
+        await API.syncGithub();
+        UI.toast("GitHub synced successfully", "success");
+        await this.loadCodingProfiles();
+        await this.loadCodingSummary(false);
+      },
+    );
+
+    this.bindProfileButton(
+      "connect-leetcode-btn",
+      "Connecting...",
+      async () => {
+        const payload = this.getCodingInput("leetcode");
+        if (!payload.username) {
+          UI.toast("Enter a LeetCode username or profile URL", "warning");
+          return;
+        }
+        const data = await API.connectLeetCode(payload);
+        await this.refreshProfileUser();
+        UI.toast("LeetCode connected successfully", "success");
+        this.renderLeetCodeCodingProfile(data.profile, null);
+        await this.loadCodingSummary(false);
+      },
+    );
+
+    this.bindProfileButton("sync-leetcode-btn", "Syncing...", async () => {
+      const data = await API.syncLeetCode({});
+      await this.refreshProfileUser();
+      UI.toast("LeetCode synced successfully", "success");
+      this.renderLeetCodeCodingProfile(data.profile, null);
+      await this.loadCodingSummary(false);
+    });
+
+    this.bindProfileButton(
+      "disconnect-leetcode-btn",
+      "Disconnecting...",
+      async () => {
+        const confirmed = await this.confirmCodingProfileDisconnect();
+        if (!confirmed) return;
+        await API.delete("/leetcode/disconnect");
+        await this.refreshProfileUser();
+        UI.toast("LeetCode account disconnected successfully", "success");
+        await this.loadCodingProfiles();
+        await this.loadCodingSummary(false);
+      },
+    );
+
+    this.bindProfileButton(
+      "connect-hackerrank-btn",
+      "Connecting...",
+      async () => {
+        const payload = this.getCodingInput("hackerrank");
+        if (!payload.username) {
+          UI.toast("Enter a HackerRank username or profile URL", "warning");
+          return;
+        }
+        await API.connectHackerRank(payload);
+        await this.refreshProfileUser();
+        UI.toast("HackerRank connected successfully", "success");
+        await this.loadCodingProfiles();
+        await this.loadCodingSummary(false);
+      },
+    );
+
+    this.bindProfileButton("sync-hackerrank-btn", "Syncing...", async () => {
+      await API.syncHackerRank({});
+      await this.refreshProfileUser();
+      UI.toast("HackerRank synced successfully", "success");
+      await this.loadCodingProfiles();
+      await this.loadCodingSummary(false);
+    });
+
+    this.bindProfileButton(
+      "disconnect-hackerrank-btn",
+      "Disconnecting...",
+      async () => {
+        const confirmed = await this.confirmCodingProfileDisconnect();
+        if (!confirmed) return;
+        await API.delete("/hackerrank/disconnect");
+        await this.refreshProfileUser();
+        UI.toast("HackerRank account disconnected successfully", "success");
+        await this.loadCodingProfiles();
+        await this.loadCodingSummary(false);
+      },
+    );
+
+    const verifyHackerRankLink = async (inputId, label) => {
+      const input = document.getElementById(inputId);
+      const url = input?.value?.trim();
+      if (!url) {
+        UI.toast(`Enter a ${label}`, "warning");
+        return;
+      }
+      await API.verifyHackerRankLink({ url });
+      UI.toast("HackerRank certificate verified successfully", "success");
+      if (input) input.value = "";
+      await this.loadHackerRankCertificates();
+      await this.loadCodingSummary(false);
+    };
+
+    this.bindProfileButton(
+      "verify-hackerrank-url-btn",
+      "Verifying...",
+      async () => {
+        await verifyHackerRankLink(
+          "hackerrank-verification-url",
+          "HackerRank verification URL",
+        );
+      },
+    );
+
+    this.bindProfileButton(
+      "verify-hackerrank-iframe-btn",
+      "Verifying...",
+      async () => {
+        await verifyHackerRankLink(
+          "hackerrank-iframe-url",
+          "HackerRank iframe URL",
+        );
+      },
+    );
+
+    this.bindProfileButton(
+      "upload-hackerrank-certificate-btn",
+      "Uploading...",
+      async () => {
+        const fileInput = document.getElementById(
+          "hackerrank-certificate-file",
+        );
+        const file = fileInput?.files?.[0];
+        if (!file) {
+          UI.toast("Please select a HackerRank certificate file", "warning");
+          return;
+        }
+        const formData = new FormData();
+        formData.append("certificate", file);
+        await API.uploadCertification(formData);
+        UI.toast("HackerRank certificate uploaded successfully", "success");
+        if (fileInput) fileInput.value = "";
+        await this.loadHackerRankCertificates();
+        await this.loadCodingSummary(false);
+      },
+    );
+
+    [
+      "generate-coding-ai-top-btn",
+      "generate-coding-ai-btn",
+      "generate-github-ai-btn",
+      "generate-leetcode-ai-btn",
+      "generate-hackerrank-ai-btn",
+    ].forEach((id) => {
+      this.bindProfileButton(id, "Generating...", async () => {
+        await this.loadCodingSummary(true);
+      });
+    });
+
+    this.bindProfileButton(
+      "refresh-coding-summary-btn",
+      "Refreshing...",
+      async () => {
+        await this.loadCodingSummary(false);
+      },
+    );
+
+    this.bindProfileButton("sync-all-coding-btn", "Syncing...", async () => {
+      const tasks = [];
+      if (this.user?.githubConnected) tasks.push(API.syncGithub());
+      if (this.user?.leetCodeConnected) {
+        tasks.push(API.syncLeetCode({}));
+      }
+      if (this.user?.hackerRankConnected) {
+        tasks.push(API.syncHackerRank({}));
+      }
+      if (!tasks.length) {
+        UI.toast("Connect at least one coding profile first", "warning");
+        return;
+      }
+      await Promise.all(tasks);
+      await this.refreshProfileUser();
+      UI.toast("Coding profiles synced successfully", "success");
+      await this.loadCodingProfiles();
+      await this.loadCodingSummary(false);
+    });
+  },
+
+  async loadCodingProfiles() {
+    try {
+      const data = await API.get("/ai/summary");
+      const {
+        githubProfile,
+        leetCodeProfile,
+        hackerRankProfile,
+        certificates,
+        summary,
+        analytics,
+      } = data;
+
+      await Promise.all([
+        this.loadGitHubCodingProfile(), // GitHub is complex, keep separate for now
+        this.renderLeetCodeCodingProfile(leetCodeProfile, analytics),
+        this.renderHackerRankCodingProfile(
+          hackerRankProfile,
+          analytics,
+          certificates,
+        ),
+        this.renderHackerRankCertificates(certificates, analytics),
+        this.renderCodingSummary(summary, analytics),
+      ]);
+    } catch (err) {
+      console.error("Failed to load unified coding profiles", err);
+      // Fallback
+      await Promise.all([
+        this.loadGitHubCodingProfile(),
+        this.loadLeetCodeCodingProfile(),
+        this.loadHackerRankCodingProfile(),
+        this.loadHackerRankCertificates(),
+      ]);
+    }
+  },
+
+  async loadGitHubCodingProfile() {
+    const body = document.getElementById("github-profile-card-body");
+    const status = document.getElementById("github-sync-status");
+    if (!body) return;
+    try {
+      const [profileData, reposData, languagesData] = await Promise.all([
+        API.getGithubProfile(),
+        API.getGithubRepositories().catch(() => ({ repositories: [] })),
+        API.getGithubLanguages().catch(() => ({ languages: [] })),
+      ]);
+      const profile = profileData.profile;
+      const stats = profileData.stats;
+      const repos = reposData.repositories || [];
+      const languages = languagesData.languages || profile?.languages || [];
+      if (!profile) {
+        body.innerHTML = `<p class="text-secondary">GitHub is not connected. Use OAuth to connect your account.</p>`;
+        if (status) status.textContent = "Not connected";
+        return;
+      }
+      const stars = repos.reduce((sum, repo) => sum + (repo.stars || 0), 0);
+      const forks = repos.reduce((sum, repo) => sum + (repo.forks || 0), 0);
+      body.innerHTML = `
+        <div class="flex items-center gap-3 mb-4">
+          <img src="${profile.avatarUrl || "https://github.com/identicons/placeholder.png"}" alt="GitHub avatar" style="width:56px;height:56px;border-radius:50%;border:1px solid var(--border);object-fit:cover">
+          <div>
+            <strong>${profile.name || this.user?.name || profile.username}</strong>
+            <div class="text-sm text-secondary">@${profile.username}</div>
+          </div>
+        </div>
+        <div class="grid grid-2 gap-3 text-sm">
+          ${this.renderCodingMetric("Followers", profile.followers || 0)}
+          ${this.renderCodingMetric("Following", profile.following || 0)}
+          ${this.renderCodingMetric("Repositories", repos.length || profile.publicRepos || 0)}
+          ${this.renderCodingMetric("Stars", stars)}
+          ${this.renderCodingMetric("Forks", forks)}
+          ${this.renderCodingMetric("Last Synced", this.formatDate(stats?.lastSynced || profile.lastSynced))}
+        </div>
+        <div class="mt-4">
+          <div class="text-xs text-muted mb-2">Languages</div>
+          ${UI.skillTags(
+            (languages || [])
+              .map((language) => language.name)
+              .filter(Boolean)
+              .slice(0, 8),
+          )}
+        </div>`;
+      if (status)
+        status.textContent = `Last synced ${this.formatDate(stats?.lastSynced || profile.lastSynced)}`;
+    } catch (err) {
+      body.innerHTML = `<p class="text-error">Could not load GitHub profile: ${err.message}</p>`;
+      if (status) status.textContent = "Load failed";
+    }
+  },
+
+  renderLeetCodeCodingProfile(profile, analytics) {
+    const body = document.getElementById("leetcode-profile-card-body");
+    const badge = document.getElementById("leetcode-status-badge");
+    const status = document.getElementById("leetcode-sync-status");
+    if (!body) return;
+
+    if (!profile) {
+      body.innerHTML = `<p class="text-secondary">Connect a LeetCode username or profile URL to load coding stats.</p>`;
+      this.setCodingProfileCardState("leetcode", false);
+      if (badge) badge.innerHTML = UI.badge("Not Connected", "warning");
+      if (status) status.textContent = "Not connected";
+      return;
+    }
+
+    body.innerHTML = `
+      <div class="flex items-center gap-3 mb-4">
+        ${profile.avatar ? `<img src="${profile.avatar}" alt="LeetCode avatar" style="width:48px;height:48px;border-radius:50%;border:1px solid var(--border);object-fit:cover">` : UI.avatar(profile.username, "sm")}
+        <div>
+          <div class="text-success text-sm">âœ“ Connected</div>
+          <strong>${profile.displayName || profile.username}</strong>
+          <div class="text-xs text-secondary">${profile.countryName || "Global"}</div>
+        </div>
+      </div>
+      
+      <h4 class="mb-2 mt-4">Problem Statistics</h4>
+      <div class="grid grid-4 gap-3 text-sm">
+        ${this.renderCodingMetric("Total Solved", profile.totalSolved || 0)}
+        ${this.renderCodingMetric("Easy", profile.easySolved || 0)}
+        ${this.renderCodingMetric("Medium", profile.mediumSolved || 0)}
+        ${this.renderCodingMetric("Hard", profile.hardSolved || 0)}
+      </div>
+
+      <h4 class="mb-2 mt-4">Contest Statistics</h4>
+      <div class="grid grid-3 gap-3 text-sm">
+        ${this.renderCodingMetric("Global Ranking", profile.ranking || "â€”")}
+        ${this.renderCodingMetric("Contest Rating", profile.contestRating ? Math.round(profile.contestRating) : "â€”")}
+        ${this.renderCodingMetric("Best Rating", profile.bestRating ? Math.round(profile.bestRating) : "â€”")}
+        ${this.renderCodingMetric("Total Contests", profile.totalContests || profile.contestHistory?.length || 0)}
+      </div>
+
+      <h4 class="mb-2 mt-4">Submission Statistics</h4>
+      <div class="grid grid-3 gap-3 text-sm">
+        ${this.renderCodingMetric("Acceptance Rate", profile.acceptanceRate ? `${profile.acceptanceRate}%` : "â€”")}
+        ${this.renderCodingMetric("Current Streak", profile.currentStreak || 0)}
+        ${this.renderCodingMetric("Total Submissions", profile.totalSubmissions || "â€”")}
+        ${this.renderCodingMetric("Accepted Submissions", profile.acceptedSubmissions || "â€”")}
+        ${this.renderCodingMetric("Last Synced", this.formatDate(profile.lastSynced))}
+      </div>
+
+      <h4 class="mb-2 mt-4">Skills & Topics</h4>
+      <div>${this.renderLeetCodeKnownTopics(profile.knownTopics)}</div>
+
+      <h4 class="mb-2 mt-4">Official Badges</h4>
+      ${
+        profile.badges?.length
+          ? `<div class="flex gap-2 flex-wrap">${profile.badges
+              .map(
+                (b) => `
+            <div class="flex items-center gap-2 p-2 border rounded tooltip" style="border:1px solid var(--border)" title="Earned: ${b.earnedDate || ""}">
+              <img src="${b.icon.startsWith("http") ? b.icon : "https://leetcode.com" + b.icon}" alt="${b.name}" style="width:24px;height:24px;object-fit:contain">
+              <span class="text-xs">${b.name}</span>
+            </div>
+          `,
+              )
+              .join("")}</div>`
+          : `<div class="text-sm text-secondary">No badges available.</div>`
+      }
+
+
+      <h4 class="mb-2 mt-4">Recent Contests</h4>
+      ${
+        profile.contestHistory?.length
+          ? profile.contestHistory
+              .slice(0, 3)
+              .map(
+                (contest) => `
+            <div class="text-sm text-secondary border rounded p-2 mb-2">
+              <strong>${contest.contestName || "Contest"}</strong><br/>
+              Rank: ${contest.ranking || "â€”"} | Solved: ${contest.problemsSolved || 0}/${contest.totalProblems || 0}
+            </div>
+          `,
+              )
+              .join("")
+          : `<div class="text-sm text-secondary">No contest history available.</div>`
+      }
+
+      ${
+        profile.recentSubmissions?.length
+          ? `
+      <h4 class="mb-2 mt-4">Recent Submissions</h4>
+      <div class="flex flex-col gap-1">
+        ${profile.recentSubmissions
+          .slice(0, 5)
+          .map((s) => {
+            const statusColor =
+              s.statusDisplay === "Accepted"
+                ? "success"
+                : s.statusDisplay === "Wrong Answer"
+                  ? "error"
+                  : "warning";
+            const ts = s.timestamp
+              ? new Date(Number(s.timestamp) * 1000).toLocaleDateString()
+              : "â€”";
+            return `<div class="text-sm flex justify-between items-center p-2 rounded" style="background:var(--bg-secondary);border:1px solid var(--border-color)">
+            <span style="font-weight:500;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.title}">${s.title}</span>
+            <span class="flex items-center gap-2">
+              <span class="text-xs text-muted">${s.lang || "â€”"}</span>
+              ${UI.badge(s.statusDisplay || "â€”", statusColor)}
+              <span class="text-xs text-muted">${ts}</span>
+            </span>
+          </div>`;
+          })
+          .join("")}
+      </div>`
+          : ""
+      }
+
+      ${
+        profile.recentProblems?.length
+          ? `
+      <h4 class="mb-2 mt-4">Recently Solved Problems</h4>
+      <div class="flex flex-col gap-1">
+        ${profile.recentProblems
+          .slice(0, 5)
+          .map((p) => {
+            const ts = p.timestamp
+              ? new Date(Number(p.timestamp) * 1000).toLocaleDateString()
+              : "â€”";
+            return `<div class="text-sm flex justify-between items-center p-2 rounded" style="background:var(--bg-secondary);border:1px solid var(--border-color)">
+            <a href="https://leetcode.com/problems/${p.titleSlug}/" target="_blank" rel="noopener" style="font-weight:500;color:var(--primary);max-width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.title}">${p.title}</a>
+            <span class="flex items-center gap-2">
+              <span class="text-xs text-muted">${p.lang || "â€”"}</span>
+              <span class="text-xs text-muted">${ts}</span>
+            </span>
+          </div>`;
+          })
+          .join("")}
+      </div>`
+          : ""
+      }
+
+      <h4 class="mb-2 mt-4">Charts</h4>
+      <div class="grid grid-2 gap-4 mb-4">
+        <div class="card chart-container"><h4 class="mb-2 text-sm">Contest Rating Graph</h4><div class="chart-wrapper"><canvas id="leetcode-rating-chart"></canvas></div></div>
+        <div class="card chart-container"><h4 class="mb-2 text-sm">Programming Languages</h4><div class="chart-wrapper"><canvas id="leetcode-languages-chart"></canvas></div></div>
+      </div>
+      <div class="card chart-container mb-4"><h4 class="mb-2 text-sm">Submission Heatmap (Past Year)</h4><div class="chart-wrapper"><canvas id="leetcode-heatmap-chart"></canvas></div></div>
+    `;
+
+    this.setCodingProfileCardState("leetcode", true);
+    if (badge) badge.innerHTML = UI.badge("Connected", "success");
+    if (status)
+      status.textContent = `Last synced ${this.formatDate(profile.lastSynced)}`;
+
+    // Render Charts
+    if (profile.contestHistory && profile.contestHistory.length > 0) {
+      const labels = profile.contestHistory.map(
+        (c) =>
+          c.contestName
+            ?.replace("Weekly Contest", "WC")
+            .replace("Biweekly Contest", "BC") || "Contest",
+      );
+      const data = profile.contestHistory.map((c) => Math.round(c.rating || 0));
+      Charts.line("leetcode-rating-chart", labels, [
+        {
+          label: "Rating",
+          data,
+          borderColor: "#F59E0B",
+          backgroundColor: "rgba(245,158,11,0.1)",
+        },
+      ]);
+    }
+
+    if (
+      profile.programmingLanguages &&
+      profile.programmingLanguages.length > 0
+    ) {
+      const labels = profile.programmingLanguages.map((l) => l.name);
+      const data = profile.programmingLanguages.map((l) => l.solved);
+      Charts.pie("leetcode-languages-chart", labels, data);
+    }
+
+    if (profile.submissionCalendar) {
+      const cal =
+        typeof profile.submissionCalendar === "string"
+          ? JSON.parse(profile.submissionCalendar)
+          : profile.submissionCalendar;
+      const timestamps = Object.keys(cal)
+        .map(Number)
+        .sort((a, b) => a - b);
+      const labels = timestamps.map((t) =>
+        new Date(t * 1000).toLocaleDateString(),
+      );
+      const data = timestamps.map((t) => cal[t]);
+      Charts.heatmap("leetcode-heatmap-chart", { labels, values: data });
+    }
+  },
+
+  async loadLeetCodeCodingProfile() {
+    try {
+      const data = await API.getLeetCodeProfile();
+      this.renderLeetCodeCodingProfile(data.profile, null);
+    } catch (err) {
+      console.error(err);
+    }
+  },
+
+  async loadHackerRankCodingProfile() {
+    const body = document.getElementById("hackerrank-profile-card-body");
+    const badge = document.getElementById("hackerrank-status-badge");
+    const status = document.getElementById("hackerrank-sync-status");
+    if (!body) return;
+    try {
+      const data = await API.getHackerRankProfile();
+      const profile = data.profile;
+      if (!profile) {
+        body.innerHTML = `<p class="text-secondary">Connect a HackerRank username or profile URL to verify your profile.</p>`;
+        const usernameInput = document.getElementById("hackerrank-username");
+        const urlInput = document.getElementById("hackerrank-url");
+        if (usernameInput) usernameInput.value = "";
+        if (urlInput) urlInput.value = "";
+        this.setCodingProfileCardState("hackerrank", false);
+        if (badge) badge.innerHTML = UI.badge("Not Connected", "warning");
+        if (status) status.textContent = "Not connected";
+        return;
+      }
+      const usernameInput = document.getElementById("hackerrank-username");
+      if (usernameInput) usernameInput.value = profile.username || "";
+      const urlInput = document.getElementById("hackerrank-url");
+      if (urlInput) urlInput.value = profile.profileUrl || "";
+      body.innerHTML = `
+        <div class="text-success text-sm mb-3">âœ“ Connected</div>
+        <div class="grid grid-2 gap-3 text-sm">
+          ${this.renderCodingMetric("Username", profile.username)}
+          ${this.renderCodingMetric("Verified", profile.verified ? "Yes" : "No")}
+          ${this.renderCodingMetric("Profile URL", profile.profileUrl ? `<a href="${profile.profileUrl}" target="_blank" class="text-secondary">Open profile</a>` : "â€”")}
+          ${this.renderCodingMetric("Last Synced", this.formatDate(profile.lastSynced))}
+        </div>
+        
+        <h4 class="mb-2 mt-4">Verified Skills</h4>
+        <div>${UI.skillTags(profile.knownSkills || profile.skills || []) || '<p class="text-sm text-secondary">No skills available.</p>'}</div>
+        
+        ${
+          profile.skillCategories?.length
+            ? `
+          <h4 class="mb-2 mt-4">Skill Categories</h4>
+          <div class="grid grid-2 gap-2 text-sm">
+            ${profile.skillCategories.map((c) => `<div><strong>${c.category}:</strong> ${c.skills.join(", ")}</div>`).join("")}
+          </div>
+        `
+            : ""
+        }
+        `;
+      this.setCodingProfileCardState("hackerrank", true);
+      if (badge)
+        badge.innerHTML = UI.badge(
+          profile.verified ? "Verified" : "Connected",
+          "success",
+        );
+      if (status)
+        status.textContent = `Last synced ${this.formatDate(profile.lastSynced)}`;
+    } catch (err) {
+      body.innerHTML = `<p class="text-error">Could not load HackerRank profile: ${err.message}</p>`;
+      this.setCodingProfileCardState("hackerrank", false);
+      if (badge) badge.innerHTML = UI.badge("Load Failed", "error");
+      if (status) status.textContent = "Load failed";
+    }
+  },
+
+  renderHackerRankCertificates(certificates, analytics) {
+    const list = document.getElementById("hackerrank-certificates-list");
+    if (!list) return;
+
+    if (!certificates || !certificates.length) {
+      list.innerHTML = UI.emptyState(
+        "ðŸ“„",
+        "No HackerRank certificates",
+        "Upload certificates to verify programming skills.",
+      );
+      return;
+    }
+
+    list.innerHTML = `<div class="grid grid-3 gap-4">${certificates
+      .map((certificate) => {
+        const fileUrl = certificate.filePath
+          ? certificate.filePath.startsWith("http")
+            ? certificate.filePath
+            : `/${certificate.filePath.replace(/\\/g, "/").replace(/^public\//, "")}`
+          : "";
+        const aiScore =
+          certificate.aiAnalysis?.score ||
+          certificate.aiAnalysis?.certificateScore ||
+          certificate.aiAnalysis?.authenticityScore ||
+          "â€”";
+        const certificateTitle =
+          certificate.certificateName ||
+          certificate.name ||
+          "HackerRank Certificate";
+        const verificationUrl =
+          certificate.verificationUrl ||
+          (typeof certificate.filePath === "string" &&
+          certificate.filePath.startsWith("http")
+            ? certificate.filePath
+            : "");
+        return `
+          <div class="card" style="padding:16px">
+            <div class="flex justify-between items-center mb-3">
+              <strong>${certificateTitle}</strong>
+              ${UI.badge(certificate.verified ? "Verified" : "Pending", certificate.verified ? "success" : "warning")}
+            </div>
+            <div class="grid grid-2 gap-3 text-sm mb-4">
+              ${this.renderCodingMetric("Candidate Name", certificate.candidateName || "â€”")}
+              ${this.renderCodingMetric("Skill", certificate.skill || certificate.difficulty || "â€”")}
+              ${this.renderCodingMetric("Issue Date", certificate.issueDate ? new Date(certificate.issueDate).toLocaleDateString() : "â€”")}
+              ${this.renderCodingMetric("Verification Status", certificate.verificationStatus || "Pending")}
+              ${this.renderCodingMetric("Confidence", certificate.verificationConfidence ? `${certificate.verificationConfidence} / 100` : "â€”")}
+              ${this.renderCodingMetric("Certificate ID", certificate.certificateId || "â€”")}
+            </div>
+            <div class="flex gap-2">
+              ${fileUrl ? `<a class="btn btn-secondary btn-sm" href="${fileUrl}" target="_blank">View</a>` : `<button class="btn btn-secondary btn-sm" disabled>View</button>`}
+              <button class="btn btn-secondary btn-sm certificate-details-btn" data-certificate-id="${certificate._id}">Details</button>
+              <button class="btn btn-secondary btn-sm delete-certificate-btn" data-certificate-id="${certificate._id}">Delete</button>
+            </div>
+          </div>`;
+      })
+      .join("")}</div>`;
+
+    list.querySelectorAll(".certificate-details-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        const certificate = certificates.find(
+          (item) => item._id === button.dataset.certificateId,
+        );
+        if (certificate) this.openHackerRankCertificateDetails(certificate);
+      });
+    });
+
+    list.querySelectorAll(".delete-certificate-btn").forEach((button) => {
+      button.addEventListener("click", async () => {
+        if (
+          !window.confirm("Are you sure you want to delete this certificate?")
+        ) {
+          return;
+        }
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = "Deleting...";
+        try {
+          await API.delete(
+            `/coding-profiles/hackerrank/certificates/${button.dataset.certificateId}`,
+          );
+          UI.toast("Certificate deleted successfully", "success");
+          await this.loadCodingProfiles();
+        } catch (err) {
+          UI.toast(err.message, "error");
+          button.disabled = false;
+          button.textContent = originalText;
+        }
+      });
+    });
+  },
+
+  async loadHackerRankCertificates() {
+    try {
+      const data = await API.getCertificates();
+      this.renderHackerRankCertificates(data.certificates, null);
+    } catch (err) {
+      console.error(err);
+    }
+  },
+
+  async loadResumes() {
+    const el = document.getElementById("resume-list");
+    if (!el) return;
+    try {
+      const data = await API.getResumes();
+      el.innerHTML =
+        `<h3 class="mb-4">Your Resumes</h3>` +
+        (data.resumes?.length
+          ? data.resumes
+              .map(
+                (r) => `
+          <div class="card mb-2 p-4" style="padding:16px">
+            <div class="flex justify-between items-center">
+              <div><strong>${r.filename}</strong><div class="text-sm text-muted">Score: ${r.score}%</div></div>
+              ${UI.badge("Parsed", "success")}
+            </div>
+            ${UI.skillTags(r.parsed?.skills?.slice(0, 5))}
+          </div>
+        `,
+              )
+              .join("")
+          : UI.emptyState("ðŸ“„", "No resumes", "Upload your first resume"));
+    } catch (_) {
+      el.innerHTML = '<p class="text-secondary">Could not load resumes</p>';
+    }
+  },
+
+  renderCodingSummary(summary, analytics) {
+    const el = document.getElementById("coding-summary-card");
+    if (!el) return;
+
+    if (!el) return;
+
+    if (!analytics || !summary || Object.keys(summary).length === 0) {
+      el.innerHTML = `
+        <div class="card">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3 class="mb-1">Unified Developer Analytics Dashboard</h3>
+              <p class="text-sm text-secondary">Cached AI analysis only. Gemini runs only when you generate analysis.</p>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn btn-secondary btn-sm" id="refresh-coding-summary-btn">Refresh Cached Analysis</button>
+              <button class="btn btn-primary btn-sm" id="generate-coding-ai-btn">Generate AI Analysis</button>
+            </div>
+          </div>
+          <p class="text-secondary">No AI analysis available.<br>Click Generate AI Analysis.</p>
+        </div>
+      `;
+      this.bindCodingSummaryButtons();
+      return;
+    }
+
+    const { developerScore, knownSkills, techStackSummary } = analytics;
+
+    let knownSkillsHtml =
+      '<p class="text-secondary">No verified known skills available.</p>';
+    if (knownSkills && knownSkills.length > 0) {
+      knownSkillsHtml = `<div class="flex gap-2 flex-wrap">${knownSkills
+        .map(
+          (s) =>
+            `<div class="badge badge-secondary tooltip" title="Confidence: ${s.confidence}%">${s.name} <span class="text-xs text-muted">(${s.confidence}%)</span></div>`,
+        )
+        .join("")}</div>`;
+    }
+
+    let techStackHtml = '<p class="text-secondary">No tech stack data.</p>';
+    if (techStackSummary) {
+      techStackHtml = `
+        <div class="grid grid-2 gap-3 text-sm">
+          <div><strong>Languages:</strong> ${techStackSummary.languages?.join(", ") || "â€”"}</div>
+          <div><strong>Frameworks:</strong> ${techStackSummary.frameworks?.join(", ") || "â€”"}</div>
+          <div><strong>Databases:</strong> ${techStackSummary.databases?.join(", ") || "â€”"}</div>
+          <div><strong>Core CS:</strong> ${techStackSummary.coreCS?.join(", ") || "â€”"}</div>
+          <div><strong>Tools:</strong> ${techStackSummary.tools?.join(", ") || "â€”"}</div>
+        </div>
+      `;
+    }
+
+    el.innerHTML = `
+      <div class="card mb-4" style="background: linear-gradient(135deg, rgba(37,99,235,0.05), rgba(99,102,241,0.05)); border: 1px solid var(--border);">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h3 class="mb-1" style="color: var(--primary)">Developer Analytics Score</h3>
+            <p class="text-sm text-secondary">Computed from LeetCode, HackerRank, and Certificates.</p>
+          </div>
+          <div class="flex gap-2 items-center">
+            <div class="text-right">
+              <div class="text-2xl font-bold" style="color: var(--primary)">${developerScore || 0}/100</div>
+              <div class="text-xs text-secondary">${developerScore >= 90 ? "Excellent" : developerScore >= 70 ? "Good" : "Needs Improvement"}</div>
+            </div>
+          </div>
+        </div>
+        <div style="width: 100%; background: var(--surface-hover); height: 8px; border-radius: 4px; overflow: hidden; margin-top: 10px;">
+          <div style="width: ${developerScore || 0}%; background: var(--primary); height: 100%; transition: width 0.3s ease;"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-2 gap-4 mb-4">
+        <div class="card p-4">
+          <h4 class="mb-3">Known Skills & Confidence</h4>
+          ${knownSkillsHtml}
+        </div>
+        <div class="card p-4">
+          <h4 class="mb-3">Unified Tech Stack Summary</h4>
+          ${techStackHtml}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h3 class="mb-1">AI Insights & Readiness</h3>
+            <p class="text-sm text-secondary">Cached AI analysis from Gemini.</p>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-primary btn-sm" id="generate-coding-ai-btn">Generate AI Analysis</button>
+            <button class="btn btn-secondary btn-sm" id="refresh-coding-summary-btn">Refresh Cached Analysis</button>
+          </div>
+        </div>
+        <div class="grid grid-2 gap-4">
+          <div class="card p-4" style="box-shadow:none; border: 1px solid var(--border)">
+            <h4 class="mb-3">Interview Readiness</h4>
+            <p class="text-secondary">${summary.interviewReadiness || "No readiness data available."}</p>
+          </div>
+          <div class="card p-4" style="box-shadow:none; border: 1px solid var(--border)">
+            <h4 class="mb-3">Hiring Recommendation</h4>
+            <p class="text-secondary">${summary.hiringRecommendation || summary.recommendation || "No recommendation available."}</p>
+          </div>
+          <div class="card p-4" style="box-shadow:none; border: 1px solid var(--border)">
+            <h4 class="mb-3">Top Skills</h4>
+            ${UI.skillTags(summary.topSkills || summary.skills || []) || '<p class="text-secondary">No top skills available.</p>'}
+          </div>
+          <div class="card p-4" style="box-shadow:none; border: 1px solid var(--border)">
+            <h4 class="mb-3">Weak Areas</h4>
+            ${(summary.weakAreas || summary.weaknesses || []).length ? `<ul style="margin:0;padding-left:18px">${(summary.weakAreas || summary.weaknesses || []).map((item) => `<li class="text-sm text-secondary">${item}</li>`).join("")}</ul>` : '<p class="text-secondary">No weak areas available.</p>'}
+          </div>
+          <div class="card p-4" style="box-shadow:none; border: 1px solid var(--border)">
+            <h4 class="mb-3">Learning Roadmap</h4>
+            ${(summary.learningRoadmap || summary.roadmap || []).length ? `<ul style="margin:0;padding-left:18px">${(summary.learningRoadmap || summary.roadmap || []).map((item) => `<li class="text-sm text-secondary">${typeof item === "string" ? item : item.skill || item.title || JSON.stringify(item)}</li>`).join("")}</ul>` : '<p class="text-secondary">No roadmap available.</p>'}
+          </div>
+          <div class="card p-4" style="box-shadow:none; border: 1px solid var(--border)">
+          <div class="card p-4" style="box-shadow:none; border: 1px solid var(--border)">
+            <h4 class="mb-3">Suitable Roles</h4>
+            ${UI.skillTags(summary.suitableRoles || summary.recommendedRoles || ["Backend Developer", "Frontend Developer", "Software Engineer"]) || '<p class="text-secondary">No roles available.</p>'}
+          </div>
+        </div>
+      </div>
+    `;
+    this.bindCodingSummaryButtons();
+  },
+
+  async loadCodingSummary(force = false) {
+    try {
+      const data = await API.get(`/ai/summary${force ? "?generate=true" : ""}`);
+      this.renderCodingSummary(data.summary, data.analytics);
+    } catch (err) {
+      console.error(err);
+    }
+  },
+
+  bindCodingSummaryButtons() {
+    this.bindProfileButton(
+      "generate-coding-ai-btn",
+      "Generating...",
+      async () => {
+        await this.loadCodingSummary(true);
+      },
+    );
+    this.bindProfileButton(
+      "refresh-coding-summary-btn",
+      "Refreshing...",
+      async () => {
+        await this.loadCodingSummary(false);
+      },
+    );
+  },
+
+  loadOverviewCharts() {
+    requestAnimationFrame(() => {
+      Charts.radar(
+        "skills-radar",
+        ["JS", "React", "Node", "Python", "AWS", "Docker"],
+        [90, 85, 80, 70, 65, 75]
+      );
+      Charts.line(
+        "learning-chart",
+        ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+        [
+          {
+            label: "Learning Hours",
+            data: [12, 18, 15, 22, 20, 28],
+            borderColor: "#2563EB",
+            backgroundColor: "rgba(37,99,235,0.1)",
+            fill: true,
+          },
+        ]
+      );
+    });
+  },
+
+  bindProfileButton(id, loadingText, fn) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const originalText = btn.textContent;
+    btn.onclick = async () => {
+      btn.disabled = true;
+      btn.textContent = loadingText;
+      try {
+        await fn();
+      } catch (err) {
+        UI.toast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    };
+  },
+
+  getCodingInput(platform) {
+    const usernameInput = document.getElementById(platform + '-username');
+    const urlInput = document.getElementById(platform + '-url');
+    const username = this.extractCodingUsername(usernameInput?.value, platform);
+    const profileUrl = urlInput?.value?.trim();
+    return { username, profileUrl };
+  },
+
+  formatDate(date) {
+    if (!date) return 'Never';
+    return new Date(date).toLocaleDateString();
+  },
+
+  async refreshProfileUser() {
+    try {
+      const data = await API.getMe();
+      if (data && data.user) {
+        API.setUser(data.user);
+        this.user = data.user;
+      }
+    } catch (_) {}
+  },
 
 };

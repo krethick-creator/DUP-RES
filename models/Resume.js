@@ -8,6 +8,7 @@ const resumeSchema = new mongoose.Schema({
     name: String,
     email: String,
     phone: String,
+    location: String,
     summary: String,
     skills: [String],
     experience: [{
@@ -22,7 +23,17 @@ const resumeSchema = new mongoose.Schema({
       degree: String,
       year: String
     }],
-    certifications: [String]
+    projects: [{
+      title: String,
+      technologies: String,
+      description: String
+    }],
+    certifications: [String],
+    languages: [String],
+    socialLinks: [{
+      platform: String,
+      url: String
+    }]
   },
   score: { type: Number, default: 0 },
   authenticityScore: { type: Number, default: 100 },

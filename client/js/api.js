@@ -67,6 +67,7 @@ const API = {
 
    // Resumes
   uploadResume: (formData) => API.post('/resumes/upload', formData),
+  createManualResume: (data) => API.post('/resumes/manual', data),
   getResumes: () => API.get('/resumes'),
   updateResumeContent: (id, data) => API.put(`/resumes/${id}`, data),
   generateAIResume: () => API.post('/resumes/generate-ai', {}),
@@ -157,5 +158,26 @@ const API = {
   generateAITheme: (resumeId, prompt) => API.post('/resumes/theme/generate', { resumeId, prompt }),
   optimizeResume: (resumeId, jobDescription) => API.post('/resumes/optimize', { resumeId, jobDescription }),
   getVersions: (resumeId) => API.get(`/resumes/versions?resumeId=${resumeId}`),
-  restoreVersion: (resumeId, versionNumber) => API.post('/resumes/version/restore', { resumeId, versionNumber })
+  restoreVersion: (resumeId, versionNumber) => API.post('/resumes/version/restore', { resumeId, versionNumber }),
+
+  // LeetCode API
+  connectLeetCode: (data) => API.post('/coding-profiles/leetcode/connect', data),
+  getLeetCodeProfile: (candidateId = '') => API.get(`/coding-profiles/leetcode/profile${candidateId ? '?candidateId=' + candidateId : ''}`),
+  syncLeetCode: () => API.post('/coding-profiles/leetcode/sync', {}),
+  disconnectLeetCode: () => API.delete('/leetcode/disconnect'),
+  
+  // HackerRank API
+  connectHackerRank: (data) => API.post('/coding-profiles/hackerrank/connect', data),
+  getHackerRankProfile: (candidateId = '') => API.get(`/coding-profiles/hackerrank/profile${candidateId ? '?candidateId=' + candidateId : ''}`),
+  syncHackerRank: () => API.post('/coding-profiles/hackerrank/sync', {}),
+  disconnectHackerRank: () => API.delete('/hackerrank/disconnect'),
+
+  // HackerRank Certificates API
+  uploadCertification: (formData) => API.post('/coding-profiles/hackerrank/certificates', formData),
+  verifyHackerRankLink: (url) => API.post('/hackerrank/verify-link', { url }),
+  getHRCertificates: (candidateId = '') => API.get(`/coding-profiles/hackerrank/certificates${candidateId ? '?candidateId=' + candidateId : ''}`),
+  deleteHRCertificate: (id) => API.delete(`/hackerrank/certificates/${id}`),
+
+  // Coding Profiles Summary
+  getCodingSummary: (candidateId = '') => API.get(`/coding-profiles/summary${candidateId ? '?candidateId=' + candidateId : ''}`)
 };

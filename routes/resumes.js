@@ -8,6 +8,7 @@ const router = express.Router();
 router.use(protect, authorize('candidate'));
 
 router.post('/generate-ai', resume.generateAIResume);
+router.post('/manual', resume.createManualResume);
 router.post('/upload', upload.single('resume'), resume.uploadResume);
 router.get('/', resume.getResumes);
 router.get('/themes', resume.getThemes);

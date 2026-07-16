@@ -14,6 +14,8 @@ const app = express();
 // Ensure upload directory exists
 const uploadDir = path.join(__dirname, '../public/uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const certUploadDir = path.join(__dirname, '../public/uploads/certificates');
+if (!fs.existsSync(certUploadDir)) fs.mkdirSync(certUploadDir, { recursive: true });
 
 
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -35,6 +37,9 @@ app.use('/api/github', require('../routes/github'));
 app.use('/api/org', require('../routes/org'));
 app.use('/api/linkedin', require('../routes/linkedin'));
 app.use('/api/ocr', require('../routes/ocr'));
+app.use('/api/leetcode', require('../routes/leetcode'));
+app.use('/api/hackerrank', require('../routes/hackerrank'));
+app.use('/api/coding-profiles', require('../routes/codingProfiles'));
 
 
 // Serve static files
